@@ -49,11 +49,13 @@ function AmountLabel(props: any) {
 
 // ─── STACKED SECTION ────────────────────────────────────────────────────────────
 function StackedSection({
-  title, badge, badgeColor, bars, delay = 0,
+  title, overallPct, badgeColor, onlinePct, offlinePct, bars, delay = 0,
 }: {
   title: string;
-  badge: string;
+  overallPct: number;
   badgeColor: string;
+  onlinePct: number;
+  offlinePct: number;
   bars: {
     name: string;
     online: number;
@@ -81,13 +83,25 @@ function StackedSection({
       {/* Card header */}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px" }}>
         <h3 style={cardHeaderStyle}>{title}</h3>
-        <span style={{
-          fontSize: "17px", fontWeight: 800, color: badgeColor,
-          background: "#F9FAFB", border: "1px solid #E5E7EB",
-          padding: "4px 16px", borderRadius: "8px",
-        }}>
-          {badge}
-        </span>
+
+        {/* Badges: Online % | Offline % | Overall */}
+        <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+          {/* Online % pill */}
+          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", background: "#F3F4F6", border: "1px solid #E5E7EB", borderRadius: "8px", padding: "4px 14px", minWidth: "72px" }}>
+            <span style={{ fontSize: "10px", fontWeight: 600, color: "#9CA3AF", textTransform: "uppercase", letterSpacing: "0.5px" }}>Online</span>
+            <span style={{ fontSize: "16px", fontWeight: 800, color: "#374151" }}>{onlinePct}%</span>
+          </div>
+          {/* Offline % pill */}
+          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", background: "#FFF4F1", border: "1px solid #FECAB4", borderRadius: "8px", padding: "4px 14px", minWidth: "72px" }}>
+            <span style={{ fontSize: "10px", fontWeight: 600, color: "#E4572E", textTransform: "uppercase", letterSpacing: "0.5px" }}>Offline</span>
+            <span style={{ fontSize: "16px", fontWeight: 800, color: "#E4572E" }}>{offlinePct}%</span>
+          </div>
+          {/* Overall pill */}
+          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", background: "#F9FAFB", border: "1px solid #E5E7EB", borderRadius: "8px", padding: "4px 14px", minWidth: "72px" }}>
+            <span style={{ fontSize: "10px", fontWeight: 600, color: "#9CA3AF", textTransform: "uppercase", letterSpacing: "0.5px" }}>Overall</span>
+            <span style={{ fontSize: "16px", fontWeight: 800, color: badgeColor }}>{overallPct}%</span>
+          </div>
+        </div>
       </div>
 
       {/* Chart — right margin expanded to accommodate amount labels */}
@@ -165,9 +179,6 @@ function StackedSection({
           </div>
         ))}
         <div style={{ marginLeft: "auto", textAlign: "right" }}>
-          <div style={{ fontSize: "11px", color: "#9CA3AF", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: "6px" }}>
-            Legend
-          </div>
           <div style={{ display: "flex", gap: "14px", justifyContent: "flex-end" }}>
             <span style={{ display: "flex", alignItems: "center", gap: "5px", fontSize: "12px", color: "#4B5563" }}>
               <span style={{ width: "10px", height: "10px", borderRadius: "2px", background: "#9CA3AF", display: "inline-block" }} />
@@ -233,16 +244,19 @@ export default function RevenueCompositionPage() {
         className="rc-header"
         style={{ marginBottom: "32px", borderBottom: "1px solid #E5E7EB", paddingBottom: "16px" }}
       >
-        <h1 style={{ fontSize: "26px", fontWeight: 700, color: "#111827", margin: 0 }}>
-          🟠 Revenue Composition
+        <h1 style={{ fontSize: "26px", fontWeight: 700, color: "#111827", margin: "0 0 4px 0" }}>
+          Revenue Composition — March&apos;26
         </h1>
+        <p style={{ margin: 0, fontSize: "13px", color: "#9CA3AF", fontWeight: 500 }}>Same period comparison</p>
       </div>
 
       {/* Block 1 */}
       <StackedSection
-        title="Target vs Actual (March'26)"
-        badge={`Achievement: ${data.section1.achievement_pct}%`}
+        title="Target vs Actual"
+        overallPct={data.section1.achievement_pct}
         badgeColor={data.section1.achievement_pct >= 90 ? "#16a34a" : data.section1.achievement_pct >= 75 ? "#d97706" : "#dc2626"}
+        onlinePct={data.section1.achievement_online_pct}
+        offlinePct={data.section1.achievement_offline_pct}
         bars={data.section1.bars}
         delay={120}
       />
@@ -250,9 +264,11 @@ export default function RevenueCompositionPage() {
 
       {/* Block 2 */}
       <StackedSection
-        title="YoY Growth (March'25 vs March'26)"
-        badge={`YoY Growth: +${data.section2.yoy_pct}%`}
+        title="YoY Growth"
+        overallPct={data.section2.yoy_pct}
         badgeColor="#16a34a"
+        onlinePct={data.section2.yoy_online_pct}
+        offlinePct={data.section2.yoy_offline_pct}
         bars={data.section2.bars}
         delay={260}
       />
@@ -260,9 +276,11 @@ export default function RevenueCompositionPage() {
 
       {/* Block 3 */}
       <StackedSection
-        title="YoY Growth (Existing Portfolio)"
-        badge={`YoY Growth: +${data.section3.growth_pct}%`}
+        title="YoY Growth (Same Store Portfolio)"
+        overallPct={data.section3.growth_pct}
         badgeColor="#16a34a"
+        onlinePct={data.section3.growth_online_pct}
+        offlinePct={data.section3.growth_offline_pct}
         bars={data.section3.bars}
         delay={400}
       />

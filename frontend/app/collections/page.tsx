@@ -23,7 +23,6 @@ const DescriptionTd = ({ name, level, zebra }: { name: string; level: number; ze
       fontSize: level === 1 ? "13px" : "11px",
       borderBottom: "1px solid #f1f5f9",
       background: bg,
-      borderLeft: level === 1 ? "4px solid #ea580c" : "none" // Orange accent for Level 1
     }}>
       {name}
     </td>
@@ -173,7 +172,7 @@ export default function CollectionsPage() {
               <td style={{ padding: "6px 12px", textAlign: "left", fontWeight: 800, color: "white", fontSize: "14px", letterSpacing: "0.02em" }}>
                 {data.total_inflow.name}
               </td>
-              <ValueTd value={null} greyOut bold />
+              <ValueTd value={data.total_inflow.target} bold />
               <ValueTd value={data.total_inflow.received} bold type="received" />
               <ValueTd value={data.total_inflow.expected} bold />
               <td style={{ 
@@ -195,5 +194,11 @@ export default function CollectionsPage() {
   );
 }
 
-const pageStyle: React.CSSProperties = { padding: "8px 16px", maxWidth: "1400px", margin: "0 auto", backgroundColor: "#fbfbfb", minHeight: "100vh" };
+const pageStyle: React.CSSProperties = {
+  padding: "32px 48px",
+  maxWidth: "1200px",
+  margin: "0 auto",
+  backgroundColor: "#ffffff",
+  minHeight: "100vh",
+};
 const thStyle: React.CSSProperties = { padding: "4px 8px", textAlign: "left", fontSize: "10px", fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.08em" };

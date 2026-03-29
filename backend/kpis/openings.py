@@ -69,34 +69,56 @@ def get_openings() -> dict:
             if len(row) > 3 and row[3] and str(row[3]).strip() and "WIP" not in str(row[3]):
                 wip.append(clean_text(row[3]))
 
-    # ── LAYER 3: WEEKLY EXECUTION — March operational breakdown ───────────────
-    # Row 16 = Open, Row 17 = Olive
+    # ── LAYER 3: WEEKLY EXECUTION — March operational breakdown ———————————————
+    # V7 layout (0-indexed rows):
+    #   rows[16] = Open  -Properties | rows[17] = Open  -Keys
+    #   rows[19] = Olive -Properties | rows[20] = Olive -Keys
     # Cols: W1=2, W2=3, W3=4, W4=5, Total=6
-    def get_brand_row(row_idx, name):
+
+    def get_row(row_idx):
+        """Read W1-W4 from a row; return list of ints."""
         if len(rows) <= row_idx:
-            return {"name": name, "w1": 0, "w2": 0, "w3": 0, "w4": 0, "total": 0}
+            return [0, 0, 0, 0]
         r = rows[row_idx]
-        w = [safe_int(r[c]) or 0 for c in range(2, 6)]
-        total = sum(w) # Using sum of weeks for the execution table total
-        return {"name": name, "w1": w[0], "w2": w[1], "w3": w[2], "w4": w[3], "total": total}
+        return [safe_int(r[c]) or 0 for c in range(2, 6)]
+
+    # Open
+    open_props_w = get_row(17)
+    open_keys_w  = get_row(18)
+
+    # Olive
+    olive_props_w = get_row(20)
+    olive_keys_w  = get_row(21)
+
+    def make_entry(label, w):
+        return {"label": label, "w1": w[0], "w2": w[1], "w3": w[2], "w4": w[3], "total": sum(w)}
 
     brands_list = [
-        get_brand_row(17, "Olive"),
-        get_brand_row(16, "Open")
+        {
+            "name": "Open",
+            "props": make_entry("-Properties", open_props_w),
+            "keys":  make_entry("-Keys",       open_keys_w),
+        },
+        {
+            "name": "Olive",
+            "props": make_entry("-Properties", olive_props_w),
+            "keys":  make_entry("-Keys",       olive_keys_w),
+        },
     ]
+
+    total_props_w = [open_props_w[i] + olive_props_w[i] for i in range(4)]
+    total_keys_w  = [open_keys_w[i]  + olive_keys_w[i]  for i in range(4)]
+
     table_totals = {
-        "w1":    sum(b["w1"]    for b in brands_list),
-        "w2":    sum(b["w2"]    for b in brands_list),
-        "w3":    sum(b["w3"]    for b in brands_list),
-        "w4":    sum(b["w4"]    for b in brands_list),
-        "total": sum(b["total"] for b in brands_list),
+        "props": make_entry("-Properties", total_props_w),
+        "keys":  make_entry("-Keys",       total_keys_w),
     }
 
     return {
-        "trend_data":      trend_data,
-        "current_month":   "March - 2026",
-        "brands":          brands_list,
-        "brands_totals":   table_totals,
-        "go_live":         go_live,
-        "wip":             wip,
+        "trend_data":    trend_data,
+        "current_month": "March - 2026",
+        "brands":        brands_list,
+        "brands_totals": table_totals,
+        "go_live":       go_live,
+        "wip":           wip,
     }

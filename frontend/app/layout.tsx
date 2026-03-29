@@ -18,7 +18,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body suppressHydrationWarning>
         <div style={{ display: "flex", minHeight: "100vh" }}>
           <Sidebar />
-          <main style={{ marginLeft: "240px", flex: 1, minHeight: "100vh", background: "#f8fafc" }}>
+          <main style={{ marginLeft: "240px", flex: 1, minHeight: "100vh", background: "#FFFFFF" }}>
             {children}
           </main>
         </div>

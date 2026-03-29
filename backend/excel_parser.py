@@ -8,7 +8,7 @@ from typing import Any
 import openpyxl
 import pandas as pd
 
-EXCEL_PATH = os.path.join(os.path.dirname(__file__), "..", "Weekly update support file V5.xlsx")
+EXCEL_PATH = os.path.join(os.path.dirname(__file__), "..", "Weekly update support file V7.xlsx")
 
 _cache: dict[str, Any] = {}
 _cache_mtime: float = 0.0

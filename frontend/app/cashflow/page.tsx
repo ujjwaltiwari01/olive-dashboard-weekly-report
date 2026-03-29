@@ -30,13 +30,13 @@ export default function CashflowPage() {
   if (!data || data.error)
     return <div style={pageStyle}><p>⚠️ Cannot load KPI data. {data?.error}</p></div>;
 
-  const { inflows = [], account_balance = [], summary = {} } = data;
+  const { inflows = [], account_balance = [], summary = {}, inflow_totals = {} } = data;
 
-  const sumTarget   = inflows.reduce((a: number, c: any) => a + (c.target   || 0), 0);
-  const sumReceived = inflows.reduce((a: number, c: any) => a + (c.received || 0), 0);
-  const sumExpected = inflows.reduce((a: number, c: any) => a + (c.expected || 0), 0);
+  const sumTarget   = (inflow_totals as any).target   || inflows.reduce((a: number, c: any) => a + (c.target   || 0), 0);
+  const sumReceived = (inflow_totals as any).received || inflows.reduce((a: number, c: any) => a + (c.received || 0), 0);
+  const sumExpected = (inflow_totals as any).expected || inflows.reduce((a: number, c: any) => a + (c.expected || 0), 0);
 
-  const totalInflow     = summary.total_inflow    || 0;
+  const immediatePayments = summary.immediate_payments || 0;
   const totalOutflow    = summary.total_outflow   || 0;
   const currentBalance  = summary.current_balance || 0;
   const closingBalance  = summary.closing_balance || 0;
@@ -77,7 +77,7 @@ export default function CashflowPage() {
         <table style={tableStyle}>
           <thead>
             <tr style={{ background: "#F9FAFB" }}>
-              <TH align="left">Type</TH>
+              <TH align="left"></TH>
               <TH>Target</TH>
               <TH highlight>Received</TH>
               <TH>Expected</TH>
@@ -85,14 +85,12 @@ export default function CashflowPage() {
           </thead>
 
           <tbody>
-            {/* INFLOW HEADER ROW — matches Excel Row 7 */}
+            {/* INFLOW HEADER ROW — no amounts, labels only */}
             <tr style={{ background: "#F9FAFB", borderBottom: "2px solid #E5E7EB" }}>
               <td style={{ ...tdStyle, fontWeight: 800, color: "#111827", textTransform: "uppercase" }}>Inflow</td>
               <td style={{ ...tdStyle, textAlign: "right", color: "#D1D5DB" }}>—</td>
               <td style={{ ...tdStyle, textAlign: "right", color: "#D1D5DB" }}>—</td>
-              <td style={{ ...tdStyle, textAlign: "right", fontWeight: 800, color: "#111827" }}>
-                {fmt(sumExpected)}
-              </td>
+              <td style={{ ...tdStyle, textAlign: "right", color: "#D1D5DB" }}>—</td>
             </tr>
 
             {inflows.map((inf: any, i: number) => (
@@ -115,15 +113,23 @@ export default function CashflowPage() {
             ))}
 
 
-            {/* OUTFLOW HEADER ROW — matches Excel Row 12 */}
+            {/* GREEN TOTAL ROW (above Outflow) — no border */}
+            <tr style={{ background: "#F0FDF4" }}>
+              <td style={{ ...tdStyle, fontWeight: 800, color: "#15803D" }}>Total</td>
+              <td style={{ ...tdStyle, textAlign: "right", fontWeight: 700, color: "#15803D" }}>{fmt(sumTarget)}</td>
+              <td style={{ ...tdStyle, textAlign: "right", fontWeight: 700, color: "#15803D" }}>{fmt(sumReceived)}</td>
+              <td style={{ ...tdStyle, textAlign: "right", fontWeight: 700, color: "#15803D" }}>{fmt(sumExpected)}</td>
+            </tr>
+
+            {/* OUTFLOW HEADER ROW — shows amount in Expected col per Excel row 12 */}
             <tr style={{ background: "#FEF2F2", borderTop: "2px solid #FECACA", borderBottom: "1px solid #FECACA" }}>
               <td style={{ ...tdStyle, fontWeight: 800, color: "#991B1B", textTransform: "uppercase" }}>Outflow</td>
               <td style={{ ...tdStyle, textAlign: "right", color: "#D1D5DB" }}>—</td>
               <td style={{ ...tdStyle, textAlign: "right", color: "#D1D5DB" }}>—</td>
-              <td style={{ ...tdStyle, textAlign: "right", fontWeight: 800, color: "#DC2626" }}>
-                {fmt(totalOutflow)}
-              </td>
+              <td style={{ ...tdStyle, textAlign: "right", fontWeight: 800, color: "#DC2626" }}>{fmt(immediatePayments)}</td>
             </tr>
+
+
           </tbody>
         </table>
       </div>
@@ -143,7 +149,6 @@ export default function CashflowPage() {
           <div style={{ fontSize: "28px", fontWeight: 800, color: "#111827", marginTop: "10px", letterSpacing: "-0.5px" }}>
             {fmt(currentBalance)}
           </div>
-          <div style={{ fontSize: "12px", color: "#9CA3AF", marginTop: "5px" }}>As of March 2026</div>
         </div>
 
 
@@ -191,9 +196,7 @@ export default function CashflowPage() {
           >
             {isPositive ? "+" : "-"}{fmt(closingBalance)}
           </div>
-          <div style={{ fontSize: "12px", color: "#9CA3AF", marginTop: "5px" }}>
-            {isPositive ? "Positive closing position" : "Negative closing position"}
-          </div>
+
         </div>
       </div>
     </div>

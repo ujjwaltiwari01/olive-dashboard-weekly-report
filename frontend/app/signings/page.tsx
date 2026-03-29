@@ -159,179 +159,205 @@ export default function SigningsPage() {
     };
   });
 
-  // Gradient percentage breakpoint based on physical X coordinates, not generic index
-  const startX = allData[0]?.xValue || 0;
-  const endX = allData[allData.length - 1]?.xValue || 1;
-  const recentStartX = allData[recentStart]?.xValue || 0;
-  const gradPct = totalCount > recentCount ? ((recentStartX - startX) / (endX - startX)) * 100 : 0;
-
   return (
     <div style={pageStyle}>
-
-      {/* ── PAGE HEADER ──────────────────────────────────────────────────── */}
       <PageHeader title="Signings Trend" />
 
-      <div style={{ display: "flex", gap: "20px", alignItems: "stretch", maxWidth: "1050px", margin: "0 auto" }}>
-        {/* ── TREND CHART ──────────────────────────────────────────────────── */}
-        <div style={{ ...cardStyle, flex: "1 1 50%", minWidth: 0, display: "flex", flexDirection: "column", padding: "20px 24px" }}>
+      <div style={{
+        display: "flex", 
+        gap: "24px", 
+        alignItems: "stretch", 
+        maxWidth: "1150px", 
+        width: "100%", 
+        margin: "24px auto 0", 
+      }}>
+        {/* ── TREND CHART ───────────────────────────────────────────── */}
+        <div style={{ ...cardStyle, flex: "1 1 0%", minWidth: 0, padding: "24px" }}>
+            <div style={cardLabelContainerStyle}>
+              <h3 style={cardHeaderStyle}>
+                No. of properties
+                <span style={{ display: "block", height: "3px", width: "40px", background: "#E4572E", borderRadius: "2px", marginTop: "6px" }} />
+              </h3>
+            </div>
 
-          <div style={{ display: "flex", alignItems: "baseline", gap: "8px", marginBottom: "12px" }}>
-            <h3 style={{ ...cardHeaderStyle, fontSize: "15px" }}>Brand-wise</h3>
+            <div style={{ height: "340px", width: "100%", marginTop: "12px" }}>
+              <ResponsiveContainer width="100%" height="100%">
+                  <LineChart
+                    data={allData}
+                    margin={{ top: 30, right: 30, left: 0, bottom: 20 }}
+                    onMouseLeave={() => setActiveBrand(null)}
+                  >
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#F1F5F9" />
+
+                  <ReferenceArea
+                    x1={allData[recentStart]?.xValue}
+                    x2={allData[allData.length - 1]?.xValue}
+                    fill="#F8FAFC"
+                    strokeOpacity={0}
+                  />
+
+                  <XAxis
+                    dataKey="xValue"
+                    type="number"
+                    domain={['dataMin', 'dataMax']}
+                    ticks={allData.map(d => d.xValue)}
+                    tickFormatter={(val) => {
+                      const item = allData.find(d => d.xValue === val);
+                      return item ? item.month : '';
+                    }}
+                    tick={{ fontSize: 11, fill: "#94a3b8", fontWeight: 600 }}
+                    axisLine={{ stroke: "#E2E8F0" }}
+                    tickLine={false}
+                    dy={12}
+                  />
+                  <YAxis
+                    tick={{ fontSize: 11, fill: "#94a3b8", fontWeight: 500 }}
+                    axisLine={{ stroke: "#E2E8F0" }}
+                    tickLine={false}
+                    dx={-10}
+                  />
+
+                  <RechartsTooltip 
+                    content={<CustomTooltip activeBrand={activeBrand} />} 
+                    shared={true} 
+                  />
+
+                  <Legend
+                    verticalAlign="bottom"
+                    iconType="circle"
+                    wrapperStyle={{ fontSize: "12px", paddingTop: "32px", fontWeight: 600, color: "#475569" }}
+                  />
+
+                  {(["Olive", "Open", "Spark"] as const).map((brand) => (
+                    <Line
+                      key={`capture-${brand}`}
+                      type="monotone"
+                      dataKey={brand}
+                      stroke="transparent"
+                      strokeWidth={30}
+                      dot={false}
+                      activeDot={false}
+                      onMouseEnter={() => setActiveBrand(brand)}
+                      onMouseMove={() => setActiveBrand(brand)}
+                      connectNulls
+                    />
+                  ))}
+
+                  <Line
+                    type="monotone"
+                    dataKey="Olive"
+                    name="Olive"
+                    stroke={COLORS.Olive}
+                    strokeWidth={3}
+                    dot={makeDot("Olive")}
+                    activeDot={{ r: 7, strokeWidth: 2, stroke: "#fff", fill: COLORS.Olive }}
+                    onMouseEnter={() => setActiveBrand("Olive")}
+                    onMouseMove={() => setActiveBrand("Olive")}
+                    connectNulls
+                    style={{ pointerEvents: "none" }}
+                  />
+
+                  <Line
+                    type="monotone"
+                    dataKey="Open"
+                    name="Open"
+                    stroke={COLORS.Open}
+                    strokeWidth={3}
+                    dot={makeDot("Open")}
+                    activeDot={{ r: 7, strokeWidth: 2, stroke: "#fff", fill: COLORS.Open }}
+                    onMouseEnter={() => setActiveBrand("Open")}
+                    onMouseMove={() => setActiveBrand("Open")}
+                    connectNulls
+                    style={{ pointerEvents: "none" }}
+                  />
+
+                  <Line
+                    type="monotone"
+                    dataKey="Spark"
+                    name="Spark"
+                    stroke={COLORS.Spark}
+                    strokeWidth={3}
+                    dot={makeDot("Spark")}
+                    activeDot={{ r: 7, strokeWidth: 2, stroke: "#fff", fill: COLORS.Spark }}
+                    onMouseEnter={() => setActiveBrand("Spark")}
+                    onMouseMove={() => setActiveBrand("Spark")}
+                    connectNulls
+                    style={{ pointerEvents: "none" }}
+                  />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
           </div>
 
-          <div style={{ flex: 1, minHeight: "240px", width: "95%", margin: "0 auto" }}>
-          <ResponsiveContainer width="100%" height="100%">
-            <LineChart
-              data={allData}
-              margin={{ top: 30, right: 75, left: 10, bottom: 20 }}
-              onMouseLeave={() => setActiveBrand(null)}
-            >
-              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#ECECEC" />
-
-              <ReferenceArea
-                x1={allData[recentStart]?.xValue}
-                x2={allData[allData.length - 1]?.xValue}
-                fill="#FFFBF0"
-                strokeOpacity={0}
-              />
-
-              <XAxis
-                dataKey="xValue"
-                type="number"
-                domain={['dataMin', 'dataMax']}
-                ticks={allData.map(d => d.xValue)}
-                tickFormatter={(val) => {
-                  const item = allData.find(d => d.xValue === val);
-                  return item ? item.month : '';
-                }}
-                tick={{ fontSize: 12, fill: "#6B6B6B", fontWeight: 600 }}
-                axisLine={{ stroke: "#E5E7EB" }}
-                tickLine={false}
-                dy={10}
-              />
-              <YAxis
-                tick={{ fontSize: 12, fill: "#6B6B6B", fontWeight: 500 }}
-                axisLine={{ stroke: "#E5E7EB" }}
-                tickLine={false}
-                dx={-10}
-              />
-
-              {/* SHARED=TRUE: We get all data for the month, but purely filter on activeBrand */}
-              <RechartsTooltip 
-                content={<CustomTooltip activeBrand={activeBrand} />} 
-                shared={true} 
-              />
-
-              <Legend
-                wrapperStyle={{ fontSize: "13px", paddingTop: "32px", color: "#1A1A1A" }}
-                iconType="circle"
-              />
-
-              {/* INVISIBLE CAPTURE LINES: Extra wide stroke for easy targeting */}
-              {(["Olive", "Open", "Spark"] as const).map((brand) => (
-                <Line
-                  key={`capture-${brand}`}
-                  type="monotone"
-                  dataKey={brand}
-                  stroke="transparent"
-                  strokeWidth={30}
-                  dot={false}
-                  activeDot={false}
-                  onMouseEnter={() => setActiveBrand(brand)}
-                  onMouseMove={() => setActiveBrand(brand)}
-                  connectNulls
-                />
-              ))}
-
-              <Line
-                type="monotone"
-                dataKey="Olive"
-                name="Olive"
-                stroke={COLORS.Olive}
-                strokeWidth={3.5}
-                dot={makeDot("Olive")}
-                activeDot={{ r: 9, strokeWidth: 3, stroke: "#fff", fill: COLORS.Olive }}
-                onMouseEnter={() => setActiveBrand("Olive")}
-                onMouseMove={() => setActiveBrand("Olive")}
-                connectNulls
-                style={{ pointerEvents: "none" }}
-              />
-
-              <Line
-                type="monotone"
-                dataKey="Open"
-                name="Open"
-                stroke={COLORS.Open}
-                strokeWidth={3.5}
-                dot={makeDot("Open")}
-                activeDot={{ r: 9, strokeWidth: 3, stroke: "#fff", fill: COLORS.Open }}
-                onMouseEnter={() => setActiveBrand("Open")}
-                onMouseMove={() => setActiveBrand("Open")}
-                connectNulls
-                style={{ pointerEvents: "none" }}
-              />
-
-              <Line
-                type="monotone"
-                dataKey="Spark"
-                name="Spark"
-                stroke={COLORS.Spark}
-                strokeWidth={3.5}
-                dot={makeDot("Spark")}
-                activeDot={{ r: 9, strokeWidth: 3, stroke: "#fff", fill: COLORS.Spark }}
-                onMouseEnter={() => setActiveBrand("Spark")}
-                onMouseMove={() => setActiveBrand("Spark")}
-                connectNulls
-                style={{ pointerEvents: "none" }}
-              />
-            </LineChart>
-          </ResponsiveContainer>
-        </div>
-      </div>
-
-      {/* ── WEEKLY BREAKDOWN ─────────────────────────────────────────────── */}
-      <div style={{ ...cardStyle, flex: "1 1 50%", display: "flex", flexDirection: "column", justifyContent: "center", padding: "20px 24px" }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "24px" }}>
-          <h3 style={cardHeaderStyle}>Weekly Breakdown</h3>
-          <span style={{
-            background: "#FFF4F1", color: "#E4572E",
-            padding: "6px 16px", borderRadius: "20px",
-            fontSize: "13px", fontWeight: 700,
-            letterSpacing: "0.5px"
+          {/* ── WEEKLY BREAKDOWN ───────────────────────────────────────── */}
+          <div style={{
+            flex: "1.2 1 0%",
+            background: "#F8F9FA",
+            borderRadius: "12px",
+            border: "1px solid #E5E7EB",
+            padding: "20px",
+            display: "flex",
+            flexDirection: "column",
+            gap: "16px",
           }}>
-            {data.current_month || "March - 2026"}
-          </span>
-        </div>
+            {/* Header: badge only */}
+            <div style={{ display: "flex", justifyContent: "flex-end", alignItems: "center" }}>
+              <span style={{
+                background: "#FFF4F1", color: "#E4572E",
+                padding: "5px 14px", borderRadius: "20px",
+                fontSize: "12px", fontWeight: 700, letterSpacing: "0.5px"
+              }}>
+                {data.current_month || "March - 2026"}
+              </span>
+            </div>
 
-        <table style={tableStyle}>
-          <thead>
-            <tr style={{ backgroundColor: "#F9FAFB" }}>
-              <Th align="left">Brand</Th>
-              <Th>W1</Th><Th>W2</Th><Th>W3</Th><Th>W4</Th>
-              <Th>Total</Th>
-            </tr>
-          </thead>
-          <tbody>
-            {data.brands?.map((b: any) => (
-              <tr key={b.name} style={{ borderBottom: "1px solid #F3F4F6", backgroundColor: "white" }}>
-                <Td bold align="left">{b.name}</Td>
-                <Td>{b.w1}</Td><Td>{b.w2}</Td><Td>{b.w3}</Td><Td>{b.w4}</Td>
-                <Td bold>{b.total}</Td>
-              </tr>
-            ))}
-            {data.brands_totals && (
-              <tr style={{ backgroundColor: "#FAFAFA", borderTop: "2px solid #E4572E" }}>
-                <Td bold align="left">TOTAL</Td>
-                <Td bold>{data.brands_totals.w1}</Td>
-                <Td bold>{data.brands_totals.w2}</Td>
-                <Td bold>{data.brands_totals.w3}</Td>
-                <Td bold>{data.brands_totals.w4}</Td>
-                <Td bold style={{ color: "#E4572E" }}>{data.brands_totals.total}</Td>
-              </tr>
-            )}
-          </tbody>
-        </table>
-      </div>
+            {/* Inner white panel */}
+            <div style={{
+              background: "#FFFFFF",
+              borderRadius: "8px",
+              border: "1px solid #E5E7EB",
+              overflow: "hidden",
+              flex: 1,
+              display: "flex",
+              flexDirection: "column",
+              justifyContent: "center",
+            }}>
+              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "13px" }}>
+                <thead>
+                  <tr style={{ borderBottom: "1px solid #E5E7EB" }}>
+                    <th style={{ padding: "8px 12px", textAlign: "left",   fontSize: "11px", fontWeight: 700, color: "#9CA3AF", textTransform: "uppercase", letterSpacing: "0.5px" }}>Brand</th>
+                    <th style={{ padding: "8px 12px", textAlign: "center", fontSize: "11px", fontWeight: 700, color: "#9CA3AF", textTransform: "uppercase", letterSpacing: "0.5px" }}>W1</th>
+                    <th style={{ padding: "8px 12px", textAlign: "center", fontSize: "11px", fontWeight: 700, color: "#9CA3AF", textTransform: "uppercase", letterSpacing: "0.5px" }}>W2</th>
+                    <th style={{ padding: "8px 12px", textAlign: "center", fontSize: "11px", fontWeight: 700, color: "#9CA3AF", textTransform: "uppercase", letterSpacing: "0.5px" }}>W3</th>
+                    <th style={{ padding: "8px 12px", textAlign: "center", fontSize: "11px", fontWeight: 700, color: "#9CA3AF", textTransform: "uppercase", letterSpacing: "0.5px" }}>W4</th>
+                    <th style={{ padding: "8px 12px", textAlign: "center", fontSize: "11px", fontWeight: 700, color: "#9CA3AF", textTransform: "uppercase", letterSpacing: "0.5px" }}>Total</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {data.brands?.map((b: any) => (
+                    <tr key={b.name} style={{ borderBottom: "1px solid #F3F4F6" }}>
+                      <td style={{ padding: "10px 12px", textAlign: "left",   fontWeight: 600, color: "#1A1A1A", fontSize: "13px" }}>{b.name}</td>
+                      <td style={{ padding: "10px 12px", textAlign: "center", color: "#6B7280" }}>{b.w1}</td>
+                      <td style={{ padding: "10px 12px", textAlign: "center", color: "#6B7280" }}>{b.w2}</td>
+                      <td style={{ padding: "10px 12px", textAlign: "center", color: "#6B7280" }}>{b.w3}</td>
+                      <td style={{ padding: "10px 12px", textAlign: "center", color: "#6B7280" }}>{b.w4}</td>
+                      <td style={{ padding: "10px 12px", textAlign: "center", fontWeight: 700, color: "#1A1A1A" }}>{b.total}</td>
+                    </tr>
+                  ))}
+                  {data.brands_totals && (
+                    <tr style={{ borderTop: "2px solid #E4572E", background: "#FFFFFF" }}>
+                      <td style={{ padding: "10px 12px", textAlign: "left",   fontWeight: 800, color: "#1A1A1A" }}>TOTAL</td>
+                      <td style={{ padding: "10px 12px", textAlign: "center", fontWeight: 700, color: "#1A1A1A" }}>{data.brands_totals.w1}</td>
+                      <td style={{ padding: "10px 12px", textAlign: "center", fontWeight: 700, color: "#1A1A1A" }}>{data.brands_totals.w2}</td>
+                      <td style={{ padding: "10px 12px", textAlign: "center", fontWeight: 700, color: "#1A1A1A" }}>{data.brands_totals.w3}</td>
+                      <td style={{ padding: "10px 12px", textAlign: "center", fontWeight: 700, color: "#1A1A1A" }}>{data.brands_totals.w4}</td>
+                      <td style={{ padding: "10px 12px", textAlign: "center", fontWeight: 800, color: "#E4572E", fontSize: "15px" }}>{data.brands_totals.total}</td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
       </div>
     </div>
   );
@@ -340,19 +366,29 @@ export default function SigningsPage() {
 // ─── STYLES & HELPERS ──────────────────────────────────────────────────────────
 
 const pageStyle: React.CSSProperties = {
-  padding: "12px 24px",
+  background: "#FFFFFF",
+  minHeight: "100vh",
+  padding: "32px 40px",
   maxWidth: "1400px",
   margin: "0 auto",
-  backgroundColor: "#FFFFFF",
-  minHeight: "100vh",
+  fontFamily: "'Inter', sans-serif",
 };
 
 const cardStyle: React.CSSProperties = {
-  background: "#FFFFFF",
-  borderRadius: "20px",
-  padding: "32px",
-  border: "1px solid #F3F4F6",
-  boxShadow: "0 10px 30px rgba(0,0,0,0.03), 0 1px 3px rgba(0,0,0,0.02)",
+  background: "#F8F9FA",
+  borderRadius: "12px",
+  padding: "24px",
+  border: "1px solid #E5E7EB",
+  boxShadow: "none",
+  display: "flex",
+  flexDirection: "column",
+};
+
+const cardLabelContainerStyle: React.CSSProperties = {
+  display: "flex",
+  justifyContent: "space-between",
+  alignItems: "center",
+  marginBottom: "16px",
 };
 
 const cardHeaderStyle: React.CSSProperties = {
@@ -372,7 +408,7 @@ const tableStyle: React.CSSProperties = {
 function PageHeader({ title }: { title: string }) {
   return (
     <div style={{ marginBottom: "12px" }}>
-      <h1 style={{ fontSize: "24px", fontWeight: 800, color: "#1A1A1A", margin: 0 }}>{title}</h1>
+      <h1 style={{ fontSize: "28px", fontWeight: 800, color: "#1A1A1A", margin: 0 }}>{title}</h1>
     </div>
   );
 }
@@ -387,7 +423,7 @@ function Th({ children, align = "center" }: { children: React.ReactNode; align?:
       color: "#9CA3AF",
       textTransform: "uppercase",
       letterSpacing: "0.5px",
-      borderBottom: "1px solid #F3F4F6",
+      borderBottom: "2px solid #FFFFFF",
     }}>
       {children}
     </th>
@@ -404,11 +440,11 @@ function Td({
 }) {
   return (
     <td style={{
-      padding: "6px 12px",
+      padding: "10px 12px",
       textAlign: align,
       color: bold ? "#1A1A1A" : "#6B6B6B",
       fontWeight: bold ? 700 : 500,
-      borderBottom: "1px solid #F9FAFB",
+      borderBottom: "2px solid #FFFFFF",
       ...style,
     }}>
       {children}

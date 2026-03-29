@@ -5,23 +5,17 @@ def get_collections() -> dict:
     if not rows:
         return {"error": "Inflow sheet not found or empty"}
 
-    # Constants for strict validation
-    EXPECTED_TA_TOTAL = 7909400
-    EXPECTED_MGMT_TOTAL = 11164958
-    EXPECTED_PROFIT_TOTAL = 435283
-    EXPECTED_INFLOW_TOTAL = 19509641
-
     def parse_property_row(r_idx):
         if r_idx >= len(rows): return None
         row = rows[r_idx]
         name = row[1]
         if not name: return None
-        
+
         target   = safe_int(row[2])
         received = safe_int(row[4])
         expected = safe_int(row[5])
         total    = (received or 0) + (expected or 0)
-        
+
         return {
             "name": name,
             "target": target,
@@ -68,24 +62,14 @@ def get_collections() -> dict:
     def get_subtotal(props, name):
         return {
             "name": name,
-            "target": sum(p["target"] for p in props if p["target"]),
+            "target":   sum(p["target"]   for p in props if p["target"]),
             "received": sum(p["received"] for p in props if p["received"]),
             "expected": sum(p["expected"] for p in props if p["expected"]),
-            "total": sum(p["total"] for p in props if p["total"])
+            "total":    sum(p["total"]    for p in props if p["total"])
         }
 
     subtotal_spark = get_subtotal(spark_props, "Subtotal Spark")
     subtotal_olive = get_subtotal(olive_props, "Subtotal Olive")
-
-    # --- STRICT VALIDATION ---
-    if ta_fees_total != EXPECTED_TA_TOTAL:
-        return {"error": f"Data Integrity Error: TA Fees Total mismatch ({ta_fees_total} vs {EXPECTED_TA_TOTAL})"}
-    if mgmt_total != EXPECTED_MGMT_TOTAL:
-        return {"error": f"Data Integrity Error: Management Fees Total mismatch ({mgmt_total} vs {EXPECTED_MGMT_TOTAL})"}
-    if profit_total != EXPECTED_PROFIT_TOTAL:
-        return {"error": f"Data Integrity Error: Profit Incentive Total mismatch ({profit_total} vs {EXPECTED_PROFIT_TOTAL})"}
-    if total_inflow != EXPECTED_INFLOW_TOTAL:
-        return {"error": f"Data Integrity Error: Total Inflow mismatch ({total_inflow} vs {EXPECTED_INFLOW_TOTAL})"}
 
     return {
         "title": "Collections — March",
@@ -93,10 +77,10 @@ def get_collections() -> dict:
         "sections": [
             {
                 "name": "TA Fees",
-                "target": ta_fees_total_row["target"],
+                "target":   ta_fees_total_row["target"],
                 "received": ta_fees_total_row["received"],
                 "expected": ta_fees_total_row["expected"],
-                "total": ta_fees_total,
+                "total":    ta_fees_total,
                 "subsections": [
                     {
                         "name": "Spark",
@@ -110,32 +94,33 @@ def get_collections() -> dict:
                     },
                     {
                         "name": "Open set-up fees",
-                        "target": open_setup["target"],
+                        "target":   open_setup["target"],
                         "received": open_setup["received"],
                         "expected": open_setup["expected"],
-                        "total": open_setup["total"]
+                        "total":    open_setup["total"]
                     }
                 ]
             },
             {
                 "name": "Management Fees",
-                "target": mgmt_fees["target"],
+                "target":   mgmt_fees["target"],
                 "received": mgmt_fees["received"],
                 "expected": mgmt_fees["expected"],
-                "total": mgmt_total
+                "total":    mgmt_total
             },
             {
                 "name": "Profit Incentive",
-                "target": profit_incentive["target"],
+                "target":   profit_incentive["target"],
                 "received": profit_incentive["received"],
                 "expected": profit_incentive["expected"],
-                "total": profit_total
+                "total":    profit_total
             }
         ],
         "total_inflow": {
-            "name": "Total Inflow",
+            "name":     "Total Inflow",
+            "target":   total_inflow_row["target"],
             "received": total_inflow_row["received"],
             "expected": total_inflow_row["expected"],
-            "total": total_inflow
+            "total":    total_inflow
         }
     }

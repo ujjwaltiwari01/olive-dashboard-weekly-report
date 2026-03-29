@@ -19,7 +19,7 @@ import openpyxl
 
 EXCEL_PATH = os.path.join(
     os.path.dirname(__file__), "..", "..",
-    "Weekly update support file V4.xlsx"
+    "Weekly update support file V7.xlsx"
 )
 
 
@@ -58,12 +58,18 @@ def get_cashflow() -> dict:
         return {"error": str(e)}
 
     return {
-        "inflows":          inflows,
-        "account_balance":  account_balance,
+        "inflows":           inflows,
+        "account_balance":   account_balance,
+        "inflow_totals": {
+            "target":   sum(i['target']   for i in inflows),
+            "received": sum(i['received'] for i in inflows),
+            "expected": sum(i['expected'] for i in inflows),
+        },
         "summary": {
-            "current_balance": current_balance,
-            "total_inflow":    sum(i['received'] for i in inflows),
-            "total_outflow":   total_outflow,
-            "closing_balance": closing_balance,
+            "immediate_payments": total_outflow,
+            "current_balance":    current_balance,
+            "total_inflow":       sum(i['received'] for i in inflows),
+            "total_outflow":      total_outflow,
+            "closing_balance":    closing_balance,
         },
     }

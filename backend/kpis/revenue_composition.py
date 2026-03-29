@@ -1,16 +1,16 @@
 """
 KPI 3: Revenue Composition — reads live from Excel (Revenue sheet)
 
-SECTION 1: Target vs Actual (March'26)        → rows 5,6,8
-SECTION 2: YoY Growth (March'25 vs March'26) → rows 14,15,17
-SECTION 3: YoY Growth (Existing Portfolio)    → rows 23,24,26
+SECTION 1: Target vs Actual (March'26)        → rows 5,6,8  | achievement col J (10)
+SECTION 2: YoY Growth (March'25 vs March'26) → rows 14,15,17 | YoY col J (10)
+SECTION 3: YoY Growth (Existing Portfolio)    → rows 23,24,26 | YoY col J (10)
 """
 import os
 import openpyxl
 
 EXCEL_PATH = os.path.join(
     os.path.dirname(__file__), "..", "..",
-    "Weekly update support file V4.xlsx"
+    "Weekly update support file V7.xlsx"
 )
 
 def _read_revenue_sheet():
@@ -21,6 +21,13 @@ def _read_revenue_sheet():
         v = ws.cell(row, col).value
         return float(v) if v is not None else 0.0
 
+    def pct(row, col):
+        """Read a % cell (stored as decimal in Excel) and return as integer %."""
+        v = ws.cell(row, col).value
+        if v is None:
+            return 0
+        return round(float(v) * 100)
+
     # ── SECTION 1: Target vs Actual ─────────────────────────────
     target_online  = val(5, 3)
     target_offline = val(6, 3)
@@ -30,11 +37,15 @@ def _read_revenue_sheet():
     actual_offline = val(6, 6)
     actual_total   = val(8, 6)
 
-    achievement_pct = round(actual_total / target_total * 100) if target_total else 0
+    achievement_pct         = round(actual_total / target_total * 100) if target_total else 0
+    achievement_online_pct  = pct(5, 10)   # J5
+    achievement_offline_pct = pct(6, 10)   # J6
 
     section1 = {
         "label": "Target vs Actual (March'26)",
-        "achievement_pct": achievement_pct,
+        "achievement_pct":         achievement_pct,
+        "achievement_online_pct":  achievement_online_pct,
+        "achievement_offline_pct": achievement_offline_pct,
         "bars": [
             {
                 "name": "Target",
@@ -64,11 +75,15 @@ def _read_revenue_sheet():
     mar26_offline = val(15, 6)
     mar26_total   = val(17, 6)
 
-    yoy_pct = round((mar26_total - mar25_total) / mar25_total * 100) if mar25_total else 0
+    yoy_pct         = round((mar26_total - mar25_total) / mar25_total * 100) if mar25_total else 0
+    yoy_online_pct  = pct(14, 10)  # J14
+    yoy_offline_pct = pct(15, 10)  # J15
 
     section2 = {
         "label": "YoY Growth (March'25 vs March'26)",
-        "yoy_pct": yoy_pct,
+        "yoy_pct":         yoy_pct,
+        "yoy_online_pct":  yoy_online_pct,
+        "yoy_offline_pct": yoy_offline_pct,
         "bars": [
             {
                 "name": "March'25",
@@ -98,11 +113,15 @@ def _read_revenue_sheet():
     exp26_offline = val(24, 6)
     exp26_total   = val(26, 6)
 
-    existing_growth_pct = round((exp26_total - exp25_total) / exp25_total * 100) if exp25_total else 0
+    existing_growth_pct         = round((exp26_total - exp25_total) / exp25_total * 100) if exp25_total else 0
+    existing_growth_online_pct  = pct(23, 10)  # J23
+    existing_growth_offline_pct = pct(24, 10)  # J24
 
     section3 = {
         "label": "YoY Growth (Existing Portfolio)",
-        "growth_pct": existing_growth_pct,
+        "growth_pct":         existing_growth_pct,
+        "growth_online_pct":  existing_growth_online_pct,
+        "growth_offline_pct": existing_growth_offline_pct,
         "bars": [
             {
                 "name": "March'25",
