@@ -1,0 +1,37 @@
+# Olive Dashboard Weekly Report
+
+A professional, boardroom-ready dashboard for tracking weekly operational and financial KPIs.
+
+## Project Structure
+
+- `frontend/`: Next.js application for the dashboard UI.
+- `backend/`: Python-based data processing and KPI calculations.
+
+## Getting Started
+
+### Prerequisites
+
+- Node.js (v18+)
+- Python (v3.9+)
+
+### Installation
+
+#### Frontend
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+#### Backend
+```bash
+cd backend
+python main.py
+```
+
+## Features
+
+- **Business Health**: Summary of key performance indicators.
+- **Signings**: Detailed tracking of new signings with trend analysis.
+- **Openings**: Operational KPI tracking for go-lives and WIP.
+- **Collections**: Financial KPI tracking for account balances and dues.
