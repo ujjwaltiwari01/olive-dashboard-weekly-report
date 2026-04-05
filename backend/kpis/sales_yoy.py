@@ -47,13 +47,13 @@ def get_sales_yoy() -> dict:
 
     chart_data = [
         {
-            "month": "March'25",
+            "month": "April 2025",
             "Walk-in": to_lakhs(mar25_totals["Walk-in"]),
             "Online": to_lakhs(mar25_totals["Online"]),
             "Corporate": to_lakhs(mar25_totals["Corporate"])
         },
         {
-            "month": "March'26",
+            "month": "April 2026",
             "Walk-in": to_lakhs(mar26_totals["Walk-in"]),
             "Online": to_lakhs(mar26_totals["Online"]),
             "Corporate": to_lakhs(mar26_totals["Corporate"])
@@ -75,6 +75,6 @@ def get_sales_yoy() -> dict:
     return {
         "chart_data": chart_data,
         "yoy_pct": yoy_pct,
-        "mar25_total": m25_sum_lakhs,
-        "mar26_total": m26_sum_lakhs
+        "apr25_total": m25_sum_lakhs,
+        "apr26_total": m26_sum_lakhs
     }

@@ -42,7 +42,7 @@ def _read_revenue_sheet():
     achievement_offline_pct = pct(6, 10)   # J6
 
     section1 = {
-        "label": "Target vs Actual (March'26)",
+        "label": "Target vs Actual (April'26)",
         "achievement_pct":         achievement_pct,
         "achievement_online_pct":  achievement_online_pct,
         "achievement_offline_pct": achievement_offline_pct,
@@ -80,13 +80,13 @@ def _read_revenue_sheet():
     yoy_offline_pct = pct(15, 10)  # J15
 
     section2 = {
-        "label": "YoY Growth (March'25 vs March'26)",
+        "label": "YoY Growth (April 2025 vs April 2026)",
         "yoy_pct":         yoy_pct,
         "yoy_online_pct":  yoy_online_pct,
         "yoy_offline_pct": yoy_offline_pct,
         "bars": [
             {
-                "name": "March'25",
+                "name": "April 2025",
                 "online":       round(mar25_online),
                 "offline":      round(mar25_offline),
                 "total":        round(mar25_total),
@@ -94,7 +94,7 @@ def _read_revenue_sheet():
                 "offline_pct":  round(mar25_offline / mar25_total * 100) if mar25_total else 0,
             },
             {
-                "name": "March'26",
+                "name": "April 2026",
                 "online":       round(mar26_online),
                 "offline":      round(mar26_offline),
                 "total":        round(mar26_total),

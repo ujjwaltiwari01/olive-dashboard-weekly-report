@@ -49,13 +49,13 @@ def get_sales_mix() -> dict:
 
     chart_data = [
         {
-            "month": "Feb'26",
+            "month": "March'26",
             "Walk-in": to_lakhs(feb_totals["Walk-in"]),
             "Online": to_lakhs(feb_totals["Online"]),
             "Corporate": to_lakhs(feb_totals["Corporate"])
         },
         {
-            "month": "March'26",
+            "month": "April'26",
             "Walk-in": to_lakhs(mar_totals["Walk-in"]),
             "Online": to_lakhs(mar_totals["Online"]),
             "Corporate": to_lakhs(mar_totals["Corporate"])
@@ -77,6 +77,6 @@ def get_sales_mix() -> dict:
     return {
         "chart_data": chart_data,
         "mom_pct": mom_pct,
-        "feb_total": feb_sum_lakhs,
-        "mar_total": mar_sum_lakhs
+        "mar_total": feb_sum_lakhs,
+        "apr_total": mar_sum_lakhs
     }

@@ -71,7 +71,7 @@ export default function RevenuePage() {
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E5E7EB" />
                 <XAxis dataKey="month" tick={{ fontSize: 14, fill: "#1A1A1A", fontWeight: 600 }} axisLine={{ stroke: "#E5E7EB" }} tickLine={false} dy={10} />
                 <YAxis tick={{ fontSize: 12, fill: "#6B6B6B" }} axisLine={{ stroke: "#E5E7EB" }} tickLine={false} dx={-10} tickFormatter={(val) => `${val}L`} />
-                <RechartsTooltip contentStyle={tooltipStyle} formatter={(val: number) => [`₹${val}L`, "Revenue"]} />
+                <RechartsTooltip contentStyle={tooltipStyle} formatter={(val: any) => [`₹${val}L`, "Revenue"]} />
                 <Legend wrapperStyle={{ fontSize: "13px", paddingTop: "20px", color: "#1A1A1A" }} iconType="circle" />
                 
                 <Bar dataKey="Walk-in" stackId="a" fill="#E4572E">
@@ -88,8 +88,8 @@ export default function RevenuePage() {
           </div>
           
           <div style={{ display: "flex", justifyContent: "space-between", marginTop: "16px", paddingTop: "16px", borderTop: "1px dashed #E5E7EB", fontSize: "14px", color: "#4B5563" }}>
-            <div><strong style={{ color: "#1A1A1A"}}>Feb Total:</strong> ₹{mixData.feb_total}L</div>
             <div><strong style={{ color: "#1A1A1A"}}>Mar Total:</strong> ₹{mixData.mar_total}L</div>
+            <div><strong style={{ color: "#1A1A1A"}}>Apr Total:</strong> ₹{mixData.apr_total}L</div>
           </div>
         </div>
 
@@ -122,7 +122,7 @@ export default function RevenuePage() {
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E5E7EB" />
                 <XAxis dataKey="month" tick={{ fontSize: 14, fill: "#1A1A1A", fontWeight: 600 }} axisLine={{ stroke: "#E5E7EB" }} tickLine={false} dy={10} />
                 <YAxis tick={{ fontSize: 12, fill: "#6B6B6B" }} axisLine={{ stroke: "#E5E7EB" }} tickLine={false} dx={-10} tickFormatter={(val) => `${val}L`} />
-                <RechartsTooltip contentStyle={tooltipStyle} formatter={(val: number) => [`₹${val}L`, "Revenue"]} />
+                <RechartsTooltip contentStyle={tooltipStyle} formatter={(val: any) => [`₹${val}L`, "Revenue"]} />
                 <Legend wrapperStyle={{ fontSize: "13px", paddingTop: "20px", color: "#1A1A1A" }} iconType="circle" />
                 
                 <Bar dataKey="Walk-in" stackId="a" fill="#E4572E">
@@ -139,8 +139,8 @@ export default function RevenuePage() {
           </div>
           
           <div style={{ display: "flex", justifyContent: "space-between", marginTop: "16px", paddingTop: "16px", borderTop: "1px dashed #E5E7EB", fontSize: "14px", color: "#4B5563" }}>
-            <div><strong style={{ color: "#1A1A1A"}}>Mar'25 Total:</strong> ₹{yoyData.mar25_total}L</div>
-            <div><strong style={{ color: "#1A1A1A"}}>Mar'26 Total:</strong> ₹{yoyData.mar26_total}L</div>
+            <div><strong style={{ color: "#1A1A1A"}}>Apr 2025 Total:</strong> ₹{yoyData.apr25_total}L</div>
+            <div><strong style={{ color: "#1A1A1A"}}>Apr 2026 Total:</strong> ₹{yoyData.apr26_total}L</div>
           </div>
         </div>
 
