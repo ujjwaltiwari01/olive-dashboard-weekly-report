@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unused-vars */
 "use client";
-import { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid,
   Tooltip as RechartsTooltip, ResponsiveContainer, ReferenceArea
@@ -164,7 +164,7 @@ export default function OpeningsPage() {
             </div>
 
             {/* Round pill legend */}
-            <div style={{ display: "flex", justifyContent: "center", gap: "12px", marginTop: "12px" }}>
+            <div style={{ display: "flex", justifyContent: "center", gap: "12px", marginTop: "12px", flexWrap: "wrap" }}>
               {([{ label: "Olive", color: "#1A1A1A" }, { label: "Open", color: "#E4572E" }]).map(({ label, color }) => (
                 <span key={label} style={{
                   display: "flex", alignItems: "center", gap: "6px",
@@ -176,93 +176,154 @@ export default function OpeningsPage() {
                 </span>
               ))}
             </div>
+
+            {/* Totals below legend */}
+            <div style={{ display: "flex", justifyContent: "center", gap: "16px", marginTop: "20px" }}>
+              <div style={{ background: "#fff", border: "1px solid #E5E7EB", borderRadius: "8px", padding: "12px 16px", minWidth: "140px", flex: "1", maxWidth: "200px", textAlign: "left", boxShadow: "0 1px 2px rgba(0,0,0,0.02)" }}>
+                <div style={{ fontSize: "11px", fontWeight: 700, color: "#9CA3AF", textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: "8px" }}>Total Properties</div>
+                <div style={{ fontWeight: 800, color: "#1A1A1A", fontSize: "24px", lineHeight: 1 }}>
+                  {data?.trend_data && data.trend_data.length > 0 
+                    ? (data.trend_data[data.trend_data.length - 1].Olive_cum_props + data.trend_data[data.trend_data.length - 1].Open_cum_props).toLocaleString('en-IN') 
+                    : 0}
+                </div>
+              </div>
+              <div style={{ background: "#fff", border: "1px solid #E5E7EB", borderRadius: "8px", padding: "12px 16px", minWidth: "140px", flex: "1", maxWidth: "200px", textAlign: "left", boxShadow: "0 1px 2px rgba(0,0,0,0.02)" }}>
+                <div style={{ fontSize: "11px", fontWeight: 700, color: "#9CA3AF", textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: "8px" }}>Total Keys</div>
+                <div style={{ fontWeight: 800, color: "#E4572E", fontSize: "24px", lineHeight: 1 }}>
+                  {((data?.olive_total_keys ?? 0) + (data?.open_total_keys ?? 0)).toLocaleString("en-IN")}
+                </div>
+              </div>
+            </div>
           </div>
 
           {/* ── WEEKLY BREAKDOWN ─────────────────────────────────────────── */}
-          <div style={{ ...cardStyle, flex: "1.4 1 0%", display: "flex", flexDirection: "column", padding: "16px 20px" }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "12px" }}>
-              <h3 style={{ ...cardHeaderStyle, fontSize: "14px" }}>
+          <div style={{ ...cardStyle, flex: "1.4 1 0%", display: "flex", flexDirection: "column", padding: "20px 24px" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px" }}>
+              <h3 style={{ ...cardHeaderStyle, fontSize: "16px" }}>
                 Weekly Breakdown
-                <span style={{ display: "block", height: "3px", width: "36px", background: "#E4572E", borderRadius: "2px", marginTop: "5px" }} />
+                <span style={{ display: "block", height: "3px", width: "36px", background: "#E4572E", borderRadius: "2px", marginTop: "6px" }} />
               </h3>
-              <span style={{ background: "#FFF4F1", color: "#E4572E", padding: "4px 14px", borderRadius: "20px", fontSize: "12px", fontWeight: 700, letterSpacing: "0.5px" }}>
-                March - 2026
+              <span style={{ color: "#E4572E", fontWeight: 700, fontSize: "13px", letterSpacing: "0.3px" }}>
+                April - 2026
               </span>
             </div>
 
-            <table style={tableStyle}>
-              <thead>
-                <tr>
-                  <Th align="left">Brand</Th>
-                  <Th>W1</Th><Th>W2</Th><Th>W3</Th><Th>W4</Th><Th>Total</Th>
-                </tr>
-              </thead>
-              <tbody>
-                {data?.brands?.map((brand: any) => (
-                  <>
-                    <tr key={brand.name} style={{ borderBottom: "1px solid #E5E7EB", background: "rgba(255,255,255,0.4)" }}>
-                      <Td bold align="left">{brand.name}</Td>
-                      <Td>—</Td><Td>—</Td><Td>—</Td><Td>—</Td><Td>—</Td>
-                    </tr>
-                    <tr style={{ borderBottom: "1px solid #F3F4F6" }}>
-                      <Td align="left" style={{ paddingLeft: "18px", color: "#6B7280", fontSize: "11px" }}>{brand.props.label}</Td>
-                      <Td>{brand.props.w1}</Td><Td>{brand.props.w2}</Td><Td>{brand.props.w3}</Td><Td>{brand.props.w4}</Td>
-                      <Td bold style={{ color: "#E4572E" }}>{brand.props.total}</Td>
-                    </tr>
-                    <tr style={{ borderBottom: "2px solid #FFFFFF" }}>
-                      <Td align="left" style={{ paddingLeft: "18px", color: "#6B7280", fontSize: "11px" }}>{brand.keys.label}</Td>
-                      <Td>{brand.keys.w1}</Td><Td>{brand.keys.w2}</Td><Td>{brand.keys.w3}</Td><Td>{brand.keys.w4}</Td>
-                      <Td bold style={{ color: "#E4572E" }}>{brand.keys.total}</Td>
-                    </tr>
-                  </>
-                ))}
-                <tr style={{ borderTop: "2px solid #E4572E", background: "rgba(255,255,255,0.4)" }}>
-                  <Td bold align="left">Total</Td>
-                  <Td>—</Td><Td>—</Td><Td>—</Td><Td>—</Td><Td>—</Td>
-                </tr>
-                <tr style={{ borderBottom: "1px solid #F3F4F6" }}>
-                  <Td align="left" style={{ paddingLeft: "18px", color: "#6B7280", fontSize: "11px" }}>{data?.brands_totals?.props?.label}</Td>
-                  <Td bold>{data?.brands_totals?.props?.w1}</Td><Td bold>{data?.brands_totals?.props?.w2}</Td>
-                  <Td bold>{data?.brands_totals?.props?.w3}</Td><Td bold>{data?.brands_totals?.props?.w4}</Td>
-                  <Td bold style={{ color: "#E4572E", fontSize: "14px" }}>{data?.brands_totals?.props?.total}</Td>
-                </tr>
-                <tr>
-                  <Td align="left" style={{ paddingLeft: "18px", color: "#6B7280", fontSize: "11px" }}>{data?.brands_totals?.keys?.label}</Td>
-                  <Td bold>{data?.brands_totals?.keys?.w1}</Td><Td bold>{data?.brands_totals?.keys?.w2}</Td>
-                  <Td bold>{data?.brands_totals?.keys?.w3}</Td><Td bold>{data?.brands_totals?.keys?.w4}</Td>
-                  <Td bold style={{ color: "#E4572E", fontSize: "14px" }}>{data?.brands_totals?.keys?.total}</Td>
-                </tr>
-              </tbody>
-            </table>
+            {/* Inner white table container */}
+            <div style={{ background: "#fff", borderRadius: "10px", border: "1px solid #EBEBEB", overflow: "hidden" }}>
+              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "13px" }}>
+                <colgroup>
+                  <col style={{ width: "32%" }} />
+                  <col style={{ width: "13%", background: "#FFF4F1" }} />
+                  <col /><col /><col /><col />
+                  <col />
+                </colgroup>
+                <thead>
+                  <tr style={{ borderBottom: "1px solid #EBEBEB" }}>
+                    <th style={{ padding: "10px 14px", textAlign: "left", fontSize: "11px", fontWeight: 700, color: "#9CA3AF", textTransform: "uppercase", letterSpacing: "0.5px" }}>Brand</th>
+                    <th style={{ padding: "10px 14px", textAlign: "center", fontSize: "11px", fontWeight: 700, color: "#E4572E", textTransform: "uppercase", letterSpacing: "0.5px", background: "#FFF4F1" }}>Mar &apos;26</th>
+                    <th style={{ padding: "10px 14px", textAlign: "center", fontSize: "11px", fontWeight: 700, color: "#9CA3AF", textTransform: "uppercase", letterSpacing: "0.5px" }}>W1</th>
+                    <th style={{ padding: "10px 14px", textAlign: "center", fontSize: "11px", fontWeight: 700, color: "#9CA3AF", textTransform: "uppercase", letterSpacing: "0.5px" }}>W2</th>
+                    <th style={{ padding: "10px 14px", textAlign: "center", fontSize: "11px", fontWeight: 700, color: "#9CA3AF", textTransform: "uppercase", letterSpacing: "0.5px" }}>W3</th>
+                    <th style={{ padding: "10px 14px", textAlign: "center", fontSize: "11px", fontWeight: 700, color: "#9CA3AF", textTransform: "uppercase", letterSpacing: "0.5px" }}>W4</th>
+                    <th style={{ padding: "10px 14px", textAlign: "center", fontSize: "11px", fontWeight: 700, color: "#9CA3AF", textTransform: "uppercase", letterSpacing: "0.5px" }}>Total</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {data?.brands?.map((brand: any) => (
+                    <React.Fragment key={brand.name}>
+                      {/* Properties row */}
+                      <tr style={{ borderBottom: "1px solid #F7F7F7" }}>
+                        <td style={{ padding: "10px 14px", fontWeight: 600, color: "#1A1A1A", fontSize: "13px" }}>{brand.name} <span style={{ color: "#9CA3AF", fontWeight: 400, fontSize: "11px" }}>— Props</span></td>
+                        <td style={{ padding: "10px 14px", textAlign: "center", fontWeight: 700, color: "#E4572E", background: "#FFF4F1", fontSize: "14px" }}>{brand.props.march26}</td>
+                        <td style={{ padding: "10px 14px", textAlign: "center", color: "#9CA3AF", fontWeight: 500 }}>{brand.props.w1}</td>
+                        <td style={{ padding: "10px 14px", textAlign: "center", color: "#9CA3AF", fontWeight: 500 }}>{brand.props.w2}</td>
+                        <td style={{ padding: "10px 14px", textAlign: "center", color: "#9CA3AF", fontWeight: 500 }}>{brand.props.w3}</td>
+                        <td style={{ padding: "10px 14px", textAlign: "center", color: "#9CA3AF", fontWeight: 500 }}>{brand.props.w4}</td>
+                        <td style={{ padding: "10px 14px", textAlign: "center", fontWeight: 700, color: "#1A1A1A" }}>{brand.props.total}</td>
+                      </tr>
+                      {/* Keys row */}
+                      <tr style={{ borderBottom: "1px solid #EBEBEB" }}>
+                        <td style={{ padding: "10px 14px 10px 24px", fontWeight: 500, color: "#6B7280", fontSize: "12px" }}>{brand.name} <span style={{ color: "#9CA3AF", fontWeight: 400, fontSize: "11px" }}>— Keys</span></td>
+                        <td style={{ padding: "10px 14px", textAlign: "center", fontWeight: 700, color: "#E4572E", background: "#FFF4F1", fontSize: "14px" }}>{brand.keys.march26}</td>
+                        <td style={{ padding: "10px 14px", textAlign: "center", color: "#9CA3AF", fontWeight: 500 }}>{brand.keys.w1}</td>
+                        <td style={{ padding: "10px 14px", textAlign: "center", color: "#9CA3AF", fontWeight: 500 }}>{brand.keys.w2}</td>
+                        <td style={{ padding: "10px 14px", textAlign: "center", color: "#9CA3AF", fontWeight: 500 }}>{brand.keys.w3}</td>
+                        <td style={{ padding: "10px 14px", textAlign: "center", color: "#9CA3AF", fontWeight: 500 }}>{brand.keys.w4}</td>
+                        <td style={{ padding: "10px 14px", textAlign: "center", fontWeight: 700, color: "#1A1A1A" }}>{brand.keys.total}</td>
+                      </tr>
+                    </React.Fragment>
+                  ))}
+
+                  {/* TOTAL — Properties */}
+                  <tr style={{ borderTop: "2px solid #E4572E", background: "#FAFAFA" }}>
+                    <td style={{ padding: "12px 14px", fontWeight: 800, color: "#1A1A1A", fontSize: "13px" }}>Total <span style={{ color: "#9CA3AF", fontWeight: 400, fontSize: "11px" }}>— Props</span></td>
+                    <td style={{ padding: "12px 14px", textAlign: "center", fontWeight: 800, color: "#E4572E", background: "#FFF4F1", fontSize: "15px" }}>{data?.brands_totals?.props?.march26}</td>
+                    <td style={{ padding: "12px 14px", textAlign: "center", fontWeight: 700, color: "#1A1A1A" }}>{data?.brands_totals?.props?.w1}</td>
+                    <td style={{ padding: "12px 14px", textAlign: "center", fontWeight: 700, color: "#1A1A1A" }}>{data?.brands_totals?.props?.w2}</td>
+                    <td style={{ padding: "12px 14px", textAlign: "center", fontWeight: 700, color: "#1A1A1A" }}>{data?.brands_totals?.props?.w3}</td>
+                    <td style={{ padding: "12px 14px", textAlign: "center", fontWeight: 700, color: "#1A1A1A" }}>{data?.brands_totals?.props?.w4}</td>
+                    <td style={{ padding: "12px 14px", textAlign: "center", fontWeight: 800, color: "#E4572E", fontSize: "15px" }}>{data?.brands_totals?.props?.total}</td>
+                  </tr>
+                  {/* TOTAL — Keys */}
+                  <tr style={{ background: "#FAFAFA" }}>
+                    <td style={{ padding: "12px 14px 12px 24px", fontWeight: 700, color: "#374151", fontSize: "13px" }}>Total <span style={{ color: "#9CA3AF", fontWeight: 400, fontSize: "11px" }}>— Keys</span></td>
+                    <td style={{ padding: "12px 14px", textAlign: "center", fontWeight: 800, color: "#E4572E", background: "#FFF4F1", fontSize: "15px" }}>{data?.brands_totals?.keys?.march26}</td>
+                    <td style={{ padding: "12px 14px", textAlign: "center", fontWeight: 700, color: "#1A1A1A" }}>{data?.brands_totals?.keys?.w1}</td>
+                    <td style={{ padding: "12px 14px", textAlign: "center", fontWeight: 700, color: "#1A1A1A" }}>{data?.brands_totals?.keys?.w2}</td>
+                    <td style={{ padding: "12px 14px", textAlign: "center", fontWeight: 700, color: "#1A1A1A" }}>{data?.brands_totals?.keys?.w3}</td>
+                    <td style={{ padding: "12px 14px", textAlign: "center", fontWeight: 700, color: "#1A1A1A" }}>{data?.brands_totals?.keys?.w4}</td>
+                    <td style={{ padding: "12px 14px", textAlign: "center", fontWeight: 800, color: "#E4572E", fontSize: "15px" }}>{data?.brands_totals?.keys?.total}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
           </div>
 
         </div>{/* end top row */}
 
-        {/* ── GO-LIVE CARD (full width below) ──────────────────────────── */}
-        <div style={{ ...cardStyle, padding: "14px 20px" }}>
-          <h3 style={{ ...contextHeaderStyle, fontSize: "11px", marginBottom: "10px", color: "#E4572E" }}>March&apos;26 Go-live</h3>
-          <div style={{ display: "flex", gap: "48px" }}>
-            <div>
-              <p style={{ fontSize: "11px", fontWeight: 800, color: "#1A1A1A", margin: "0 0 4px 0", textTransform: "uppercase", letterSpacing: "0.5px" }}>Olive</p>
-              <ul style={listStyle}>
-                {["Olive Hotel Hosa Road by Embassy Group"].map((item, idx) => (
-                  <li key={idx} style={{ ...listItemStyle, fontSize: "11px", padding: "2px 0" }}>
-                    <span style={{ color: "#1A1A1A", marginRight: "6px", fontWeight: 800 }}>•</span>{item}
-                  </li>
-                ))}
-              </ul>
-            </div>
-            <div>
-              <p style={{ fontSize: "11px", fontWeight: 800, color: "#E4572E", margin: "0 0 4px 0", textTransform: "uppercase", letterSpacing: "0.5px" }}>Open</p>
-              <ul style={listStyle}>
-                {["Urban Suites", "The Grand Vista Business Hotel", "The Botanica", "Mystic hotel", "Hilvon Business Hotel"].map((item, idx) => (
-                  <li key={idx} style={{ ...listItemStyle, fontSize: "11px", padding: "2px 0" }}>
-                    <span style={{ color: "#E4572E", marginRight: "6px", fontWeight: 800 }}>•</span>{item}
-                  </li>
-                ))}
-              </ul>
-            </div>
-          </div>
+        {/* ── APRIL'26 WIP CARD (restricted width) ─────────────────── */}
+        <div style={{ ...cardStyle, padding: "14px 20px", maxWidth: "650px" }}>
+          <h3 style={{ ...contextHeaderStyle, fontSize: "11px", marginBottom: "12px", color: "#E4572E" }}>April&apos;26 WIP — Olive</h3>
+          <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "12px" }}>
+            <thead>
+              <tr style={{ borderBottom: "2px solid #E5E7EB" }}>
+                <th style={{ textAlign: "left", padding: "4px 10px", fontWeight: 700, fontSize: "11px", color: "#9CA3AF", textTransform: "uppercase", letterSpacing: "0.5px" }}>Property</th>
+                <th style={{ textAlign: "center", padding: "4px 10px", fontWeight: 700, fontSize: "11px", color: "#9CA3AF", textTransform: "uppercase", letterSpacing: "0.5px" }}>Keys</th>
+                <th style={{ textAlign: "center", padding: "4px 10px", fontWeight: 700, fontSize: "11px", color: "#9CA3AF", textTransform: "uppercase", letterSpacing: "0.5px" }}>Target</th>
+              </tr>
+            </thead>
+            <tbody>
+              {(data?.wip_properties ?? []).length > 0
+                ? (data.wip_properties as any[]).map((prop: any, idx: number) => (
+                    <tr key={idx} style={{ borderBottom: "1px solid #F3F4F6" }}>
+                      <td style={{ padding: "6px 10px", color: "#1A1A1A", fontWeight: 500 }}>
+                        <span style={{ color: "#1A1A1A", marginRight: "6px", fontWeight: 800 }}>•</span>{prop.name}
+                      </td>
+                      <td style={{ padding: "6px 10px", textAlign: "center", fontWeight: 700, color: "#E4572E" }}>{prop.keys}</td>
+                      <td style={{ padding: "6px 10px", textAlign: "center", fontWeight: 500, color: "#6B7280" }}>{prop.target}</td>
+                    </tr>
+                  ))
+                : (
+                  /* Fallback: hardcoded from Excel screenshot */
+                  [{ name: "Nagavara (JC Reddy)", keys: 105, target: "April '26" },
+                   { name: "Journalist colony (Hyd)", keys: 35, target: "April '26" },
+                   { name: "VIP Road, Vizag (Venkata Savitri Ravisett)", keys: 30, target: "April '26" },
+                   { name: "JP Nagar (Santosh)", keys: 39, target: "April '26" },
+                   { name: "Hulimavu", keys: 56, target: "April '26" },
+                   { name: "Guntur", keys: 36, target: "April '26" },
+                  ].map((prop, idx) => (
+                    <tr key={idx} style={{ borderBottom: "1px solid #F3F4F6" }}>
+                      <td style={{ padding: "6px 10px", color: "#1A1A1A", fontWeight: 500 }}>
+                        <span style={{ color: "#1A1A1A", marginRight: "6px", fontWeight: 800 }}>•</span>{prop.name}
+                      </td>
+                      <td style={{ padding: "6px 10px", textAlign: "center", fontWeight: 700, color: "#E4572E" }}>{prop.keys}</td>
+                      <td style={{ padding: "6px 10px", textAlign: "center", fontWeight: 500, color: "#6B7280" }}>{prop.target}</td>
+                    </tr>
+                  ))
+                )
+              }
+            </tbody>
+          </table>
         </div>
 
       </div>{/* end outer column */}
@@ -273,11 +334,10 @@ export default function OpeningsPage() {
 // ─── STYLES & HELPERS ──────────────────────────────────────────────────────────
 
 const pageStyle: React.CSSProperties = {
-  padding: "24px 32px",
-  maxWidth: "1400px",
-  margin: "0 auto",
-  background: "#FFFFFF",
+  backgroundColor: "transparent",
   minHeight: "100vh",
+  padding: "24px 0",
+  margin: "0 auto",
   fontFamily: "'Inter', sans-serif",
 };
 
@@ -320,7 +380,7 @@ function PageHeader({ title }: { title: string }) {
   );
 }
 
-function Th({ children, align = "center" }: { children: React.ReactNode; align?: "left" | "center" | "right" }) {
+function Th({ children, align = "center", style = {} }: { children: React.ReactNode; align?: "left" | "center" | "right"; style?: React.CSSProperties }) {
   return (
     <th style={{
       padding: "6px 12px",
@@ -331,6 +391,7 @@ function Th({ children, align = "center" }: { children: React.ReactNode; align?:
       textTransform: "uppercase",
       letterSpacing: "0.5px",
       borderBottom: "2px solid #FFFFFF",
+      ...style,
     }}>
       {children}
     </th>
@@ -338,7 +399,7 @@ function Th({ children, align = "center" }: { children: React.ReactNode; align?:
 }
 
 function Td({ children, bold, align = "center", style = {} }: {
-  children: React.ReactNode; bold?: boolean; align?: "left" | "center" | "right"; style?: React.CSSProperties;
+  children?: React.ReactNode; bold?: boolean; align?: "left" | "center" | "right"; style?: React.CSSProperties;
 }) {
   return (
     <td style={{

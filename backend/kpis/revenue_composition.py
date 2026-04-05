@@ -10,7 +10,7 @@ import openpyxl
 
 EXCEL_PATH = os.path.join(
     os.path.dirname(__file__), "..", "..",
-    "Weekly update support file V7.xlsx"
+    "Weekly update support file - 06.04.2026 - v4.xlsx"
 )
 
 def _read_revenue_sheet():
@@ -104,40 +104,23 @@ def _read_revenue_sheet():
         ]
     }
 
-    # ── SECTION 3: Existing Portfolio Growth ────────────────────
-    exp25_online  = val(23, 3)
-    exp25_offline = val(24, 3)
+    # ── SECTION 3: Stable Properties (Non-Stacked) ────────────────
     exp25_total   = val(26, 3)
-
-    exp26_online  = val(23, 6)
-    exp26_offline = val(24, 6)
     exp26_total   = val(26, 6)
 
-    existing_growth_pct         = round((exp26_total - exp25_total) / exp25_total * 100) if exp25_total else 0
-    existing_growth_online_pct  = pct(23, 10)  # J23
-    existing_growth_offline_pct = pct(24, 10)  # J24
+    existing_growth_pct = pct(22, 10)  # Row 22, Col J
 
     section3 = {
-        "label": "YoY Growth (Existing Portfolio)",
-        "growth_pct":         existing_growth_pct,
-        "growth_online_pct":  existing_growth_online_pct,
-        "growth_offline_pct": existing_growth_offline_pct,
+        "label": "March'26 vs March'25 - Stable properties",
+        "growth_pct": existing_growth_pct,
         "bars": [
             {
-                "name": "March'25",
-                "online":       round(exp25_online),
-                "offline":      round(exp25_offline),
-                "total":        round(exp25_total),
-                "online_pct":   round(exp25_online  / exp25_total * 100) if exp25_total else 0,
-                "offline_pct":  round(exp25_offline / exp25_total * 100) if exp25_total else 0,
+                "name": "March 25",
+                "total": round(exp25_total),
             },
             {
-                "name": "March'26",
-                "online":       round(exp26_online),
-                "offline":      round(exp26_offline),
-                "total":        round(exp26_total),
-                "online_pct":   round(exp26_online  / exp26_total * 100) if exp26_total else 0,
-                "offline_pct":  round(exp26_offline / exp26_total * 100) if exp26_total else 0,
+                "name": "March 26",
+                "total": round(exp26_total),
             },
         ]
     }

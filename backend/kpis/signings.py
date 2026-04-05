@@ -55,19 +55,20 @@ def get_signings() -> dict:
             "Open_cum_keys":  open_cum_keys  or 0,
         })
 
-    # ── WEEKLY BREAKDOWN (March — current month) ──────────────────────────────
-    # Row 22=Open, Row 23=Olive, Row 24=Spark
-    # Cols: name=2, W1=3, W2=4, W3=5, W4=6, Total=7
+    # ── WEEKLY BREAKDOWN (April — current month) ──────────────────────────────
+    # Row 23=Open, Row 24=Olive, Row 25=Spark (Excel indices 22, 23, 24)
+    # Corrected indices from raw data: name=2, Prev(Mar)=3, W1=4, W2=5, W3=6, W4=7, Total=8
     def get_brand_row(row_idx, name):
         if len(rows) <= row_idx:
-            return {"name": name, "w1": 0, "w2": 0, "w3": 0, "w4": 0, "total": 0}
+            return {"name": name, "prev_month": 0, "w1": 0, "w2": 0, "w3": 0, "w4": 0, "total": 0}
         r = rows[row_idx]
-        w1    = safe_int(r[3]) or 0
-        w2    = safe_int(r[4]) or 0
-        w3    = safe_int(r[5]) or 0
-        w4    = safe_int(r[6]) or 0
-        total = safe_int(r[7]) or (w1 + w2 + w3 + w4)
-        return {"name": name, "w1": w1, "w2": w2, "w3": w3, "w4": w4, "total": total}
+        prev_m = safe_int(r[3]) or 0
+        w1     = safe_int(r[4]) or 0
+        w2     = safe_int(r[5]) or 0
+        w3     = safe_int(r[6]) or 0
+        w4     = safe_int(r[7]) or 0
+        total  = safe_int(r[8]) or (w1 + w2 + w3 + w4)
+        return {"name": name, "prev_month": prev_m, "w1": w1, "w2": w2, "w3": w3, "w4": w4, "total": total}
 
     brands_list = [
         get_brand_row(23, "Olive"),
@@ -76,21 +77,28 @@ def get_signings() -> dict:
     ]
 
     table_totals = {
-        "w1":    sum(b["w1"]    for b in brands_list),
-        "w2":    sum(b["w2"]    for b in brands_list),
-        "w3":    sum(b["w3"]    for b in brands_list),
-        "w4":    sum(b["w4"]    for b in brands_list),
-        "total": sum(b["total"] for b in brands_list),
+        "prev_month": sum(b["prev_month"] for b in brands_list),
+        "w1":         sum(b["w1"]         for b in brands_list),
+        "w2":         sum(b["w2"]         for b in brands_list),
+        "w3":         sum(b["w3"]         for b in brands_list),
+        "w4":         sum(b["w4"]         for b in brands_list),
+        "total":      sum(b["total"]      for b in brands_list),
     }
 
     mar_total = monthly_totals[-1]["Olive"] + monthly_totals[-1]["Spark"] + monthly_totals[-1]["Open"]
     feb_total = monthly_totals[-2]["Olive"] + monthly_totals[-2]["Spark"] + monthly_totals[-2]["Open"]
 
+    latest = monthly_totals[-1]
+    total_properties = (latest["Olive_props"] or 0) + (latest["Spark_props"] or 0) + (latest["Open_props"] or 0)
+    total_keys       = (latest["Olive_cum_keys"] or 0) + (latest["Spark_cum_keys"] or 0) + (latest["Open_cum_keys"] or 0)
+
     return {
         "monthly_totals":    monthly_totals,
-        "current_month":     "March - 2026",
+        "current_month":     "April - 2026",
         "brands":            brands_list,
         "brands_totals":     table_totals,
+        "total_properties":  total_properties,
+        "total_keys":        total_keys,
         "insights":          [],
         "comparison_note":   f"March Total Signings: {mar_total} (vs Feb: {feb_total})",
     }

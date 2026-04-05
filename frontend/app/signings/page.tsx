@@ -82,9 +82,7 @@ const CustomTooltip = ({ active, payload, label, activeBrand }: any) => {
       boxShadow: "0 10px 40px rgba(0,0,0,0.15)",
       minWidth: "180px",
     }}>
-      <div style={{ fontWeight: 800, color: "#1A1A1A", fontSize: "16px", marginBottom: "4px" }}>
-        {label}
-      </div>
+
       <div style={{ 
         display: "flex", 
         alignItems: "center", 
@@ -161,7 +159,9 @@ export default function SigningsPage() {
 
   return (
     <div style={pageStyle}>
-      <PageHeader title="Signings Trend" />
+      <PageHeader title={
+        <>Signings Trend <span style={{ color: "#9CA3AF", fontWeight: 600 }}>(Incl. LOI)</span></>
+      } />
 
       <div style={{
         display: "flex", 
@@ -287,6 +287,46 @@ export default function SigningsPage() {
                 </LineChart>
               </ResponsiveContainer>
             </div>
+
+            {/* ── TOTALS STRIP ───────────────────────────────────────────── */}
+            <div style={{ display: "flex", gap: "12px", marginTop: "16px" }}>
+              <div style={{
+                flex: 1,
+                background: "#FFFFFF",
+                borderRadius: "10px",
+                padding: "12px 18px",
+                border: "1px solid #E5E7EB",
+                display: "flex",
+                flexDirection: "column",
+                gap: "4px",
+              }}>
+                <div style={{ fontSize: "10px", fontWeight: 700, color: "#9CA3AF", textTransform: "uppercase", letterSpacing: "0.06em" }}>
+                  Total Properties
+                </div>
+                <div style={{ fontSize: "26px", fontWeight: 800, color: "#1A1A1A", letterSpacing: "-0.5px" }}>
+                  {data.total_properties ?? 0}
+                </div>
+              </div>
+              <div style={{
+                flex: 1,
+                background: "#FFFFFF",
+                borderRadius: "10px",
+                padding: "12px 18px",
+                border: "1px solid #E5E7EB",
+                display: "flex",
+                flexDirection: "column",
+                gap: "4px",
+              }}>
+                <div style={{ fontSize: "10px", fontWeight: 700, color: "#9CA3AF", textTransform: "uppercase", letterSpacing: "0.06em" }}>
+                  Total Keys
+                </div>
+                <div style={{ fontSize: "26px", fontWeight: 800, color: "#E4572E", letterSpacing: "-0.5px" }}>
+                  {data.total_keys ?? 0}
+                </div>
+              </div>
+            </div>
+
+
           </div>
 
           {/* ── WEEKLY BREAKDOWN ───────────────────────────────────────── */}
@@ -300,8 +340,12 @@ export default function SigningsPage() {
             flexDirection: "column",
             gap: "16px",
           }}>
-            {/* Header: badge only */}
-            <div style={{ display: "flex", justifyContent: "flex-end", alignItems: "center" }}>
+            {/* Header: title and badge */}
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px" }}>
+              <h3 style={cardHeaderStyle}>
+                Weekly Breakdown
+                <span style={{ display: "block", height: "3px", width: "40px", background: "#E4572E", borderRadius: "2px", marginTop: "6px" }} />
+              </h3>
               <span style={{
                 background: "#FFF4F1", color: "#E4572E",
                 padding: "5px 14px", borderRadius: "20px",
@@ -311,21 +355,20 @@ export default function SigningsPage() {
               </span>
             </div>
 
-            {/* Inner white panel */}
+            {/* Inner white panel - Moved up by removing flex:1 */}
             <div style={{
               background: "#FFFFFF",
               borderRadius: "8px",
               border: "1px solid #E5E7EB",
               overflow: "hidden",
-              flex: 1,
               display: "flex",
               flexDirection: "column",
-              justifyContent: "center",
             }}>
               <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "13px" }}>
                 <thead>
                   <tr style={{ borderBottom: "1px solid #E5E7EB" }}>
                     <th style={{ padding: "8px 12px", textAlign: "left",   fontSize: "11px", fontWeight: 700, color: "#9CA3AF", textTransform: "uppercase", letterSpacing: "0.5px" }}>Brand</th>
+                    <th style={{ padding: "8px 12px", textAlign: "center", fontSize: "11px", fontWeight: 700, color: "#E4572E", textTransform: "uppercase", letterSpacing: "0.5px", background: "#FFF4F1" }}>Mar '26</th>
                     <th style={{ padding: "8px 12px", textAlign: "center", fontSize: "11px", fontWeight: 700, color: "#9CA3AF", textTransform: "uppercase", letterSpacing: "0.5px" }}>W1</th>
                     <th style={{ padding: "8px 12px", textAlign: "center", fontSize: "11px", fontWeight: 700, color: "#9CA3AF", textTransform: "uppercase", letterSpacing: "0.5px" }}>W2</th>
                     <th style={{ padding: "8px 12px", textAlign: "center", fontSize: "11px", fontWeight: 700, color: "#9CA3AF", textTransform: "uppercase", letterSpacing: "0.5px" }}>W3</th>
@@ -337,6 +380,7 @@ export default function SigningsPage() {
                   {data.brands?.map((b: any) => (
                     <tr key={b.name} style={{ borderBottom: "1px solid #F3F4F6" }}>
                       <td style={{ padding: "10px 12px", textAlign: "left",   fontWeight: 600, color: "#1A1A1A", fontSize: "13px" }}>{b.name}</td>
+                      <td style={{ padding: "10px 12px", textAlign: "center", color: "#E4572E", fontWeight: 700, background: "#FFFBF0" }}>{b.prev_month}</td>
                       <td style={{ padding: "10px 12px", textAlign: "center", color: "#6B7280" }}>{b.w1}</td>
                       <td style={{ padding: "10px 12px", textAlign: "center", color: "#6B7280" }}>{b.w2}</td>
                       <td style={{ padding: "10px 12px", textAlign: "center", color: "#6B7280" }}>{b.w3}</td>
@@ -347,6 +391,7 @@ export default function SigningsPage() {
                   {data.brands_totals && (
                     <tr style={{ borderTop: "2px solid #E4572E", background: "#FFFFFF" }}>
                       <td style={{ padding: "10px 12px", textAlign: "left",   fontWeight: 800, color: "#1A1A1A" }}>TOTAL</td>
+                      <td style={{ padding: "10px 12px", textAlign: "center", fontWeight: 800, color: "#E4572E", background: "#FFF4F1" }}>{data.brands_totals.prev_month}</td>
                       <td style={{ padding: "10px 12px", textAlign: "center", fontWeight: 700, color: "#1A1A1A" }}>{data.brands_totals.w1}</td>
                       <td style={{ padding: "10px 12px", textAlign: "center", fontWeight: 700, color: "#1A1A1A" }}>{data.brands_totals.w2}</td>
                       <td style={{ padding: "10px 12px", textAlign: "center", fontWeight: 700, color: "#1A1A1A" }}>{data.brands_totals.w3}</td>
@@ -357,6 +402,27 @@ export default function SigningsPage() {
                 </tbody>
               </table>
             </div>
+
+            {/* ── PORTFOLIO UPDATE ───────────────────────────────────────── */}
+            <div style={{
+              background: "#FFFFFF",
+              borderRadius: "8px",
+              padding: "16px 20px",
+              border: "1px solid #E5E7EB",
+              marginTop: "auto",
+            }}>
+              <h4 style={{ margin: "0 0 10px 0", fontSize: "14px", fontWeight: 800, color: "#1A1A1A" }}>Portfolio Update:</h4>
+              <ul style={{ margin: 0, padding: 0, listStyle: "none", fontSize: "12.5px", color: "#4B5563", lineHeight: "1.6" }}>
+                <li style={{ marginBottom: "8px", display: "flex", gap: "8px" }}>
+                  <span style={{ fontWeight: 700, color: "#E4572E" }}>1.</span>
+                  <span>Spark Indore: A Letter of Intent (LOI) was executed on March 30th.</span>
+                </li>
+                <li style={{ display: "flex", gap: "8px" }}>
+                  <span style={{ fontWeight: 700, color: "#E4572E" }}>2.</span>
+                  <span>Sadahalli, Bangalore: The property has been formally converted from the Olive brand to Spark.</span>
+                </li>
+              </ul>
+            </div>
           </div>
       </div>
     </div>
@@ -366,10 +432,9 @@ export default function SigningsPage() {
 // ─── STYLES & HELPERS ──────────────────────────────────────────────────────────
 
 const pageStyle: React.CSSProperties = {
-  background: "#FFFFFF",
+  backgroundColor: "transparent",
   minHeight: "100vh",
-  padding: "32px 40px",
-  maxWidth: "1400px",
+  padding: "24px 0",
   margin: "0 auto",
   fontFamily: "'Inter', sans-serif",
 };
@@ -405,7 +470,7 @@ const tableStyle: React.CSSProperties = {
   fontSize: "14px",
 };
 
-function PageHeader({ title }: { title: string }) {
+function PageHeader({ title }: { title: React.ReactNode }) {
   return (
     <div style={{ marginBottom: "12px" }}>
       <h1 style={{ fontSize: "28px", fontWeight: 800, color: "#1A1A1A", margin: 0 }}>{title}</h1>

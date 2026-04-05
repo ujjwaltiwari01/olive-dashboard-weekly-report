@@ -33,6 +33,10 @@ export default function CashflowPage() {
   const { inflows = [], account_balance = [], summary = {}, inflow_totals = {} } = data;
 
   const sumTarget   = (inflow_totals as any).target   || inflows.reduce((a: number, c: any) => a + (c.target   || 0), 0);
+  const sumW1       = (inflow_totals as any).w1       || inflows.reduce((a: number, c: any) => a + (c.w1       || 0), 0);
+  const sumW2       = (inflow_totals as any).w2       || inflows.reduce((a: number, c: any) => a + (c.w2       || 0), 0);
+  const sumW3       = (inflow_totals as any).w3       || inflows.reduce((a: number, c: any) => a + (c.w3       || 0), 0);
+  const sumW4       = (inflow_totals as any).w4       || inflows.reduce((a: number, c: any) => a + (c.w4       || 0), 0);
   const sumReceived = (inflow_totals as any).received || inflows.reduce((a: number, c: any) => a + (c.received || 0), 0);
   const sumExpected = (inflow_totals as any).expected || inflows.reduce((a: number, c: any) => a + (c.expected || 0), 0);
 
@@ -67,7 +71,7 @@ export default function CashflowPage() {
         style={{ marginBottom: "28px", borderBottom: "1px solid #E5E7EB", paddingBottom: "16px" }}
       >
         <h1 style={{ fontSize: "26px", fontWeight: 700, color: "#1A1A1A", margin: 0 }}>
-          🏦 Cashflow Summary March'26
+          🏦 Cashflow Summary - April'26
         </h1>
       </div>
 
@@ -77,10 +81,16 @@ export default function CashflowPage() {
         <table style={tableStyle}>
           <thead>
             <tr style={{ background: "#F9FAFB" }}>
-              <TH align="left"></TH>
-              <TH>Target</TH>
-              <TH highlight>Received</TH>
-              <TH>Expected</TH>
+              <TH align="left" rowSpan={2}></TH>
+              <TH rowSpan={2}>Target</TH>
+              <TH highlight align="center" colSpan={4}>Received</TH>
+              <TH rowSpan={2}>Expected</TH>
+            </tr>
+            <tr style={{ background: "#F9FAFB" }}>
+              <TH highlight>W1</TH>
+              <TH highlight>W2</TH>
+              <TH highlight>W3</TH>
+              <TH highlight>W4</TH>
             </tr>
           </thead>
 
@@ -88,9 +98,12 @@ export default function CashflowPage() {
             {/* INFLOW HEADER ROW — no amounts, labels only */}
             <tr style={{ background: "#F9FAFB", borderBottom: "2px solid #E5E7EB" }}>
               <td style={{ ...tdStyle, fontWeight: 800, color: "#111827", textTransform: "uppercase" }}>Inflow</td>
-              <td style={{ ...tdStyle, textAlign: "right", color: "#D1D5DB" }}>—</td>
-              <td style={{ ...tdStyle, textAlign: "right", color: "#D1D5DB" }}>—</td>
-              <td style={{ ...tdStyle, textAlign: "right", color: "#D1D5DB" }}>—</td>
+              <td style={{ ...tdStyle }} />
+              <td style={{ ...tdStyle }} />
+              <td style={{ ...tdStyle }} />
+              <td style={{ ...tdStyle }} />
+              <td style={{ ...tdStyle }} />
+              <td style={{ ...tdStyle }} />
             </tr>
 
             {inflows.map((inf: any, i: number) => (
@@ -100,14 +113,19 @@ export default function CashflowPage() {
                   {fmt(inf.target)}
                 </td>
                 <td className="recv-highlight" style={{ ...tdStyle, textAlign: "right", fontWeight: 700, color: "#E4572E" }}>
-                  {inf.received > 0
-                    ? fmt(inf.received)
-                    : <span style={{ color: "#D1D5DB" }}>—</span>}
+                  {inf.w1 > 0 ? fmt(inf.w1) : ""}
+                </td>
+                <td className="recv-highlight" style={{ ...tdStyle, textAlign: "right", fontWeight: 700, color: "#E4572E" }}>
+                  {inf.w2 > 0 ? fmt(inf.w2) : ""}
+                </td>
+                <td className="recv-highlight" style={{ ...tdStyle, textAlign: "right", fontWeight: 700, color: "#E4572E" }}>
+                  {inf.w3 > 0 ? fmt(inf.w3) : ""}
+                </td>
+                <td className="recv-highlight" style={{ ...tdStyle, textAlign: "right", fontWeight: 700, color: "#E4572E" }}>
+                  {inf.w4 > 0 ? fmt(inf.w4) : ""}
                 </td>
                 <td style={{ ...tdStyle, textAlign: "right", color: "#F97316" }}>
-                  {inf.expected > 0
-                    ? fmt(inf.expected)
-                    : <span style={{ color: "#D1D5DB" }}>—</span>}
+                  {inf.expected > 0 ? fmt(inf.expected) : ""}
                 </td>
               </tr>
             ))}
@@ -117,15 +135,18 @@ export default function CashflowPage() {
             <tr style={{ background: "#F0FDF4" }}>
               <td style={{ ...tdStyle, fontWeight: 800, color: "#15803D" }}>Total</td>
               <td style={{ ...tdStyle, textAlign: "right", fontWeight: 700, color: "#15803D" }}>{fmt(sumTarget)}</td>
-              <td style={{ ...tdStyle, textAlign: "right", fontWeight: 700, color: "#15803D" }}>{fmt(sumReceived)}</td>
+              <td style={{ ...tdStyle, textAlign: "right", fontWeight: 700, color: "#15803D" }}>{fmt(sumW1)}</td>
+              <td style={{ ...tdStyle, textAlign: "right", fontWeight: 700, color: "#15803D" }}>{fmt(sumW2)}</td>
+              <td style={{ ...tdStyle, textAlign: "right", fontWeight: 700, color: "#15803D" }}>{fmt(sumW3)}</td>
+              <td style={{ ...tdStyle, textAlign: "right", fontWeight: 700, color: "#15803D" }}>{fmt(sumW4)}</td>
               <td style={{ ...tdStyle, textAlign: "right", fontWeight: 700, color: "#15803D" }}>{fmt(sumExpected)}</td>
             </tr>
 
             {/* OUTFLOW HEADER ROW — shows amount in Expected col per Excel row 12 */}
             <tr style={{ background: "#FEF2F2", borderTop: "2px solid #FECACA", borderBottom: "1px solid #FECACA" }}>
               <td style={{ ...tdStyle, fontWeight: 800, color: "#991B1B", textTransform: "uppercase" }}>Outflow</td>
-              <td style={{ ...tdStyle, textAlign: "right", color: "#D1D5DB" }}>—</td>
-              <td style={{ ...tdStyle, textAlign: "right", color: "#D1D5DB" }}>—</td>
+              <td style={{ ...tdStyle }} />
+              <td colSpan={4} style={{ ...tdStyle }} />
               <td style={{ ...tdStyle, textAlign: "right", fontWeight: 800, color: "#DC2626" }}>{fmt(immediatePayments)}</td>
             </tr>
 
@@ -209,13 +230,19 @@ function TH({
   children,
   align,
   highlight,
+  colSpan,
+  rowSpan,
 }: {
   children?: React.ReactNode;
   align?: string;
   highlight?: boolean;
+  colSpan?: number;
+  rowSpan?: number;
 }) {
   return (
     <th
+      colSpan={colSpan}
+      rowSpan={rowSpan}
       style={{
         padding: "10px 14px",
         textAlign: (align as any) || "right",
@@ -235,9 +262,8 @@ function TH({
 
 // ─── STYLES ─────────────────────────────────────────────────────────────────────
 const pageStyle: React.CSSProperties = {
-  padding: "40px",
-  maxWidth: "1300px",
-  backgroundColor: "#FFFFFF",
+  padding: "24px 0",
+  backgroundColor: "transparent",
   minHeight: "100vh",
 };
 

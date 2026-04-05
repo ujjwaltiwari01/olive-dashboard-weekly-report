@@ -12,16 +12,24 @@ def get_collections() -> dict:
         if not name: return None
 
         target   = safe_int(row[2])
-        received = safe_int(row[4])
-        expected = safe_int(row[5])
-        total    = (received or 0) + (expected or 0)
+        w1       = safe_int(row[4])
+        w2       = safe_int(row[5])
+        w3       = safe_int(row[6])
+        w4       = safe_int(row[7])
+        received = (w1 or 0) + (w2 or 0) + (w3 or 0) + (w4 or 0)
+        expected = safe_int(row[8])
+        total    = received + (expected or 0)
 
         return {
-            "name": name,
-            "target": target,
+            "name":     name,
+            "target":   target,
+            "w1":       w1,
+            "w2":       w2,
+            "w3":       w3,
+            "w4":       w4,
             "received": received,
             "expected": expected,
-            "total": total
+            "total":    total,
         }
 
     # 1. TA FEES
@@ -61,66 +69,102 @@ def get_collections() -> dict:
     # ── SUB-TOTAL CALCULATIONS ───────────────────────────────────────
     def get_subtotal(props, name):
         return {
-            "name": name,
+            "name":     name,
             "target":   sum(p["target"]   for p in props if p["target"]),
+            "w1":       sum(p["w1"]       for p in props if p["w1"]),
+            "w2":       sum(p["w2"]       for p in props if p["w2"]),
+            "w3":       sum(p["w3"]       for p in props if p["w3"]),
+            "w4":       sum(p["w4"]       for p in props if p["w4"]),
             "received": sum(p["received"] for p in props if p["received"]),
             "expected": sum(p["expected"] for p in props if p["expected"]),
-            "total":    sum(p["total"]    for p in props if p["total"])
+            "total":    sum(p["total"]    for p in props if p["total"]),
         }
 
     subtotal_spark = get_subtotal(spark_props, "Subtotal Spark")
     subtotal_olive = get_subtotal(olive_props, "Subtotal Olive")
 
+    def row_fields(r):
+        """Extract all fields from a parsed row dict safely."""
+        if not r:
+            return {"target": None, "w1": None, "w2": None, "w3": None, "w4": None, "received": 0, "expected": None, "total": 0}
+        return r
+
+    tf  = row_fields(ta_fees_total_row)
+    mf  = row_fields(mgmt_fees)
+    pi  = row_fields(profit_incentive)
+    tif = row_fields(total_inflow_row)
+    os_ = row_fields(open_setup)
+
     return {
-        "title": "Collections — March",
+        "title":    "Collections — April'26",
         "subtitle": "Collections breakdown by revenue stream",
         "sections": [
             {
-                "name": "TA Fees",
-                "target":   ta_fees_total_row["target"],
-                "received": ta_fees_total_row["received"],
-                "expected": ta_fees_total_row["expected"],
+                "name":     "TA Fees",
+                "target":   tf["target"],
+                "w1":       tf["w1"],
+                "w2":       tf["w2"],
+                "w3":       tf["w3"],
+                "w4":       tf["w4"],
+                "received": tf["received"],
+                "expected": tf["expected"],
                 "total":    ta_fees_total,
                 "subsections": [
                     {
-                        "name": "Spark",
+                        "name":       "Spark",
                         "properties": spark_props,
-                        "subtotal": subtotal_spark
+                        "subtotal":   subtotal_spark,
                     },
                     {
-                        "name": "Olive",
+                        "name":       "Olive",
                         "properties": olive_props,
-                        "subtotal": subtotal_olive
+                        "subtotal":   subtotal_olive,
                     },
                     {
-                        "name": "Open set-up fees",
-                        "target":   open_setup["target"],
-                        "received": open_setup["received"],
-                        "expected": open_setup["expected"],
-                        "total":    open_setup["total"]
-                    }
-                ]
+                        "name":     "Open set-up fees",
+                        "target":   os_["target"],
+                        "w1":       os_["w1"],
+                        "w2":       os_["w2"],
+                        "w3":       os_["w3"],
+                        "w4":       os_["w4"],
+                        "received": os_["received"],
+                        "expected": os_["expected"],
+                        "total":    os_["total"],
+                    },
+                ],
             },
             {
-                "name": "Management Fees",
-                "target":   mgmt_fees["target"],
-                "received": mgmt_fees["received"],
-                "expected": mgmt_fees["expected"],
-                "total":    mgmt_total
+                "name":     "Management Fees",
+                "target":   mf["target"],
+                "w1":       mf["w1"],
+                "w2":       mf["w2"],
+                "w3":       mf["w3"],
+                "w4":       mf["w4"],
+                "received": mf["received"],
+                "expected": mf["expected"],
+                "total":    mgmt_total,
             },
             {
-                "name": "Profit Incentive",
-                "target":   profit_incentive["target"],
-                "received": profit_incentive["received"],
-                "expected": profit_incentive["expected"],
-                "total":    profit_total
-            }
+                "name":     "Profit Incentive",
+                "target":   pi["target"],
+                "w1":       pi["w1"],
+                "w2":       pi["w2"],
+                "w3":       pi["w3"],
+                "w4":       pi["w4"],
+                "received": pi["received"],
+                "expected": pi["expected"],
+                "total":    profit_total,
+            },
         ],
         "total_inflow": {
             "name":     "Total Inflow",
-            "target":   total_inflow_row["target"],
-            "received": total_inflow_row["received"],
-            "expected": total_inflow_row["expected"],
-            "total":    total_inflow
-        }
+            "target":   tif["target"],
+            "w1":       tif["w1"],
+            "w2":       tif["w2"],
+            "w3":       tif["w3"],
+            "w4":       tif["w4"],
+            "received": tif["received"],
+            "expected": tif["expected"],
+            "total":    total_inflow,
+        },
     }

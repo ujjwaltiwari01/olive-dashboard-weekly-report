@@ -195,6 +195,73 @@ function StackedSection({
   );
 }
 
+function ComparisonSection({
+  title, overallPct, badgeColor, bars, delay = 0,
+}: {
+  title: string;
+  overallPct: number;
+  badgeColor: string;
+  bars: {
+    name: string;
+    total: number;
+  }[];
+  delay?: number;
+}) {
+  return (
+    <div
+      className="rc-card"
+      style={{ ...cardStyle, animationDelay: `${delay}ms` }}
+    >
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px" }}>
+        <h3 style={cardHeaderStyle}>{title}</h3>
+        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", background: "#F9FAFB", border: "1px solid #E5E7EB", borderRadius: "8px", padding: "4px 14px", minWidth: "72px" }}>
+          <span style={{ fontSize: "10px", fontWeight: 600, color: "#9CA3AF", textTransform: "uppercase", letterSpacing: "0.5px" }}>Overall</span>
+          <span style={{ fontSize: "16px", fontWeight: 800, color: badgeColor }}>{overallPct}%</span>
+        </div>
+      </div>
+
+      <div style={{ height: "250px" }}>
+        <ResponsiveContainer width="100%" height="100%">
+          <BarChart
+            data={bars}
+            margin={{ top: 25, right: 0, left: 0, bottom: 0 }}
+            barSize={120}
+          >
+            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E5E7EB" />
+            <XAxis
+              dataKey="name"
+              tick={{ fontSize: 13, fontWeight: 700, fill: "#374151" }}
+              axisLine={false} tickLine={false}
+            />
+            <YAxis hide />
+            <Bar
+              dataKey="total"
+              fill="#E4572E"
+              radius={[6, 6, 0, 0]}
+              isAnimationActive
+            >
+              <LabelList dataKey="total" position="top" content={(props: any) => {
+                const { x, y, width, index } = props;
+                return (
+                  <text
+                    x={x + width / 2}
+                    y={y - 12}
+                    textAnchor="middle"
+                    dominantBaseline="middle"
+                    style={{ fontSize: "14px", fontWeight: 800, fill: "#111827" }}
+                  >
+                    {toL(bars[index]?.total ?? 0)}
+                  </text>
+                );
+              }} />
+            </Bar>
+          </BarChart>
+        </ResponsiveContainer>
+      </div>
+    </div>
+  );
+}
+
 // ─── MAIN PAGE ──────────────────────────────────────────────────────────────────
 export default function RevenueCompositionPage() {
   const [data, setData] = useState<any>(null);
@@ -245,7 +312,7 @@ export default function RevenueCompositionPage() {
         style={{ marginBottom: "32px", borderBottom: "1px solid #E5E7EB", paddingBottom: "16px" }}
       >
         <h1 style={{ fontSize: "26px", fontWeight: 700, color: "#111827", margin: "0 0 4px 0" }}>
-          Revenue Composition — March&apos;26
+          Revenue Composition — April&apos;26
         </h1>
         <p style={{ margin: 0, fontSize: "13px", color: "#9CA3AF", fontWeight: 500 }}>Same period comparison</p>
       </div>
@@ -275,12 +342,10 @@ export default function RevenueCompositionPage() {
       <div style={{ height: "24px" }} />
 
       {/* Block 3 */}
-      <StackedSection
-        title="YoY Growth (Same Store Portfolio)"
+      <ComparisonSection
+        title="March'26 vs March'25 - Stable properties"
         overallPct={data.section3.growth_pct}
         badgeColor="#16a34a"
-        onlinePct={data.section3.growth_online_pct}
-        offlinePct={data.section3.growth_offline_pct}
         bars={data.section3.bars}
         delay={400}
       />
@@ -290,9 +355,8 @@ export default function RevenueCompositionPage() {
 
 // ─── STYLES ─────────────────────────────────────────────────────────────────────
 const pageStyle: React.CSSProperties = {
-  padding: "40px",
-  maxWidth: "1100px",
-  backgroundColor: "#FFFFFF",
+  padding: "24px 0",
+  backgroundColor: "transparent",
   minHeight: "100vh",
 };
 

@@ -43,82 +43,110 @@ def get_openings() -> dict:
             "Open_cum_props":  open_cum_props or 0,
         })
 
-    # ── OPERATIONAL CONTEXT — Go-live and WIP ────────────────────────────────
-    # Col B (idx 1) = Go-live, Col D (idx 3) = WIP
-    # Scraping rows 23-30 for text items
-    go_live = []
-    wip = []
+    # ── OPERATIONAL CONTEXT — April'26 WIP properties ───────────────────────
+    # V8 layout: WIP section is the "March '26 WIP" block
+    # Col B (idx 1) = Property name, Col H (idx 7) = Keys, Col I (idx 8) = Target date
+    # Scan all rows looking for the WIP section marker then collect properties
+    wip_properties = []
+    in_wip_section = False
 
-    def clean_text(t):
-        if not t: return ""
-        # Remove brand prefixes
-        t = str(t).replace("Open Hotel by Olive - ", "").replace("Open Hotel by Olive  ", "").replace("Open Hotel by Olive – ", "")
-        t = t.replace("Olive Hotel ", "")
-        # Remove anything in parenthesis or extra descriptors
-        if "(" in t: t = t.split("(")[0]
-        if " by " in t: t = t.split(" by ")[0]
-        return t.strip()
+    for r_idx in range(20, 60):
+        if r_idx >= len(rows):
+            break
+        row = rows[r_idx]
 
-    for r_idx in range(23, 30):
-        if r_idx < len(rows):
-            row = rows[r_idx]
-            # Column B (Go-live items)
-            if len(row) > 1 and row[1] and str(row[1]).strip() and "Go-live" not in str(row[1]):
-                go_live.append(clean_text(row[1]))
-            # Column D (WIP items)
-            if len(row) > 3 and row[3] and str(row[3]).strip() and "WIP" not in str(row[3]):
-                wip.append(clean_text(row[3]))
+        # Detect section start — col B contains text with "WIP"
+        b_cell = str(row[1]).strip() if len(row) > 1 and row[1] else ""
+        if "WIP" in b_cell:
+            in_wip_section = True
+            continue
 
-    # ── LAYER 3: WEEKLY EXECUTION — March operational breakdown ———————————————
-    # V7 layout (0-indexed rows):
-    #   rows[16] = Open  -Properties | rows[17] = Open  -Keys
-    #   rows[19] = Olive -Properties | rows[20] = Olive -Keys
-    # Cols: W1=2, W2=3, W3=4, W4=5, Total=6
+        if not in_wip_section:
+            continue
+
+        # Stop at empty row
+        if not b_cell:
+            continue
+
+        # Skip sub-headers like "Olive", "Open"
+        if b_cell in ("Olive", "Open") or b_cell.startswith("-"):
+            continue
+
+        keys_cell  = row[7] if len(row) > 7 else None
+        target_cell = row[8] if len(row) > 8 else None
+        keys_val   = safe_int(keys_cell)
+        target_str = str(target_cell).strip() if target_cell and str(target_cell).strip() not in ("None", "") else "April '26"
+
+        wip_properties.append({
+            "name":   b_cell,
+            "keys":   keys_val or 0,
+            "target": target_str,
+        })
+
+    # ── LAYER 3: WEEKLY EXECUTION — operational breakdown ————————————————————
+    # V8 layout (0-indexed rows):
+    #   rows[17] = Open  -Properties | rows[18] = Open  -Keys
+    #   rows[20] = Olive -Properties | rows[21] = Olive -Keys
+    # Col layout: col[1]=label, col[2]=March'26, col[3]=W1, col[4]=W2, col[5]=W3, col[6]=W4
 
     def get_row(row_idx):
-        """Read W1-W4 from a row; return list of ints."""
+        """Read March'26 (col 2) + W1-W4 (cols 3-6) from a row."""
         if len(rows) <= row_idx:
-            return [0, 0, 0, 0]
+            return 0, [0, 0, 0, 0]
         r = rows[row_idx]
-        return [safe_int(r[c]) or 0 for c in range(2, 6)]
+        march26 = safe_int(r[2]) or 0 if len(r) > 2 else 0
+        weekly  = [safe_int(r[c]) or 0 for c in range(3, 7)]
+        return march26, weekly
 
     # Open
-    open_props_w = get_row(17)
-    open_keys_w  = get_row(18)
+    open_props_mar26,  open_props_w  = get_row(17)
+    open_keys_mar26,   open_keys_w   = get_row(18)
 
     # Olive
-    olive_props_w = get_row(20)
-    olive_keys_w  = get_row(21)
+    olive_props_mar26, olive_props_w = get_row(20)
+    olive_keys_mar26,  olive_keys_w  = get_row(21)
 
-    def make_entry(label, w):
-        return {"label": label, "w1": w[0], "w2": w[1], "w3": w[2], "w4": w[3], "total": sum(w)}
+    def make_entry(label, mar26, w):
+        return {
+            "label":   label,
+            "march26": mar26,
+            "w1":      w[0], "w2": w[1], "w3": w[2], "w4": w[3],
+            "total":   sum(w)
+        }
 
     brands_list = [
         {
             "name": "Open",
-            "props": make_entry("-Properties", open_props_w),
-            "keys":  make_entry("-Keys",       open_keys_w),
+            "props": make_entry("-Properties", open_props_mar26,  open_props_w),
+            "keys":  make_entry("-Keys",       open_keys_mar26,   open_keys_w),
         },
         {
             "name": "Olive",
-            "props": make_entry("-Properties", olive_props_w),
-            "keys":  make_entry("-Keys",       olive_keys_w),
+            "props": make_entry("-Properties", olive_props_mar26, olive_props_w),
+            "keys":  make_entry("-Keys",       olive_keys_mar26,  olive_keys_w),
         },
     ]
 
-    total_props_w = [open_props_w[i] + olive_props_w[i] for i in range(4)]
-    total_keys_w  = [open_keys_w[i]  + olive_keys_w[i]  for i in range(4)]
+    total_props_w   = [open_props_w[i]  + olive_props_w[i]  for i in range(4)]
+    total_keys_w    = [open_keys_w[i]   + olive_keys_w[i]   for i in range(4)]
+    total_props_mar = open_props_mar26  + olive_props_mar26
+    total_keys_mar  = open_keys_mar26   + olive_keys_mar26
 
     table_totals = {
-        "props": make_entry("-Properties", total_props_w),
-        "keys":  make_entry("-Keys",       total_keys_w),
+        "props": make_entry("-Properties", total_props_mar, total_props_w),
+        "keys":  make_entry("-Keys",       total_keys_mar,  total_keys_w),
     }
 
+    # Total key counts from final cumulative values
+    olive_total_keys = trend_data[-1]["Olive"] if trend_data else 0
+    open_total_keys  = trend_data[-1]["Open"]  if trend_data else 0
+
     return {
-        "trend_data":    trend_data,
-        "current_month": "March - 2026",
-        "brands":        brands_list,
-        "brands_totals": table_totals,
-        "go_live":       go_live,
-        "wip":           wip,
+        "trend_data":      trend_data,
+        "current_month":   "April - 2026",
+        "brands":          brands_list,
+        "brands_totals":   table_totals,
+        "wip_properties": wip_properties,
+        "olive_total_keys": olive_total_keys,
+        "open_total_keys":  open_total_keys,
     }

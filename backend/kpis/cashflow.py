@@ -1,6 +1,6 @@
 """
 KPI 4: Cashflow — March
-Reads live from Excel (cashflow sheet), Weekly update support file V4.xlsx
+Reads live from Excel (cashflow sheet), Weekly update support file - 06.04.2026 - v1.xlsx
 
 cashflow sheet layout (1-indexed cols):
   col2 = label | col3 = Target | col4 = Received | col5 = Expected
@@ -19,7 +19,7 @@ import openpyxl
 
 EXCEL_PATH = os.path.join(
     os.path.dirname(__file__), "..", "..",
-    "Weekly update support file V7.xlsx"
+    "Weekly update support file - 06.04.2026 - v4.xlsx"
 )
 
 
@@ -32,14 +32,17 @@ def _read():
         return float(val) if val is not None else 0.0
 
     inflows = [
-        {"type": "TA Fees",          "target": v(8, 3),  "received": v(8, 4),  "expected": v(8, 5)},
-        {"type": "Management Fees",  "target": v(9, 3),  "received": v(9, 4),  "expected": v(9, 5)},
-        {"type": "Profit Incentive", "target": v(10, 3), "received": v(10, 4), "expected": v(10, 5)},
+        {"type": "TA Fees",          "target": v(8, 3),  "w1": v(8, 4), "w2": v(8, 5), "w3": v(8, 6), "w4": v(8, 7),  "expected": v(8, 8)},
+        {"type": "Management Fees",  "target": v(9, 3),  "w1": v(9, 4), "w2": v(9, 5), "w3": v(9, 6), "w4": v(9, 7),  "expected": v(9, 8)},
+        {"type": "Profit Incentive", "target": v(10, 3), "w1": v(10, 4), "w2": v(10, 5), "w3": v(10, 6), "w4": v(10, 7), "expected": v(10, 8)},
     ]
 
-    total_outflow    = v(12, 5)   # Outflow row — col5
-    current_balance  = v(15, 5)   # Current bank balance — col5
-    closing_balance  = v(20, 5)   # Closing Cash — col5
+    for inf in inflows:
+        inf["received"] = inf["w1"] + inf["w2"] + inf["w3"] + inf["w4"]
+
+    total_outflow    = v(12, 8)   # Outflow row — col8
+    current_balance  = v(15, 8)   # Current bank balance — col8
+    closing_balance  = v(20, 8)   # Closing Cash — col8
 
     account_balance = [
         {"account": "Coliving Operations", "amount": v(16, 3)},
@@ -63,6 +66,10 @@ def get_cashflow() -> dict:
         "inflow_totals": {
             "target":   sum(i['target']   for i in inflows),
             "received": sum(i['received'] for i in inflows),
+            "w1":       sum(i['w1']       for i in inflows),
+            "w2":       sum(i['w2']       for i in inflows),
+            "w3":       sum(i['w3']       for i in inflows),
+            "w4":       sum(i['w4']       for i in inflows),
             "expected": sum(i['expected'] for i in inflows),
         },
         "summary": {
