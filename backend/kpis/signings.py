@@ -12,7 +12,7 @@ Signings sheet (Weekly update support file - 13.04.2026 v2 layout, 0-indexed row
 """
 import re
 
-from excel_parser import get_sheet_values, safe_int
+from excel_parser import excel_file_available, excel_source_path, get_sheet_values, safe_int
 
 
 def _portfolio_title_match(text: str) -> bool:
@@ -84,6 +84,15 @@ def _signing_rows():
 
 
 def get_signings() -> dict:
+    if not excel_file_available():
+        return {
+            "error": (
+                "Weekly Excel workbook is missing on the server. "
+                "Set OLIVE_WEEKLY_EXCEL_PATH to the absolute path of your .xlsx file. "
+                f"Checked: {excel_source_path()}"
+            ),
+            "portfolio_update": [],
+        }
     rows = _signing_rows()
     if not rows:
         return {"error": "Signings sheet not found or empty", "portfolio_update": []}

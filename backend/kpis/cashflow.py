@@ -17,13 +17,15 @@ cashflow sheet layout (1-indexed cols):
 import os
 import openpyxl
 
-EXCEL_PATH = os.path.join(
-    os.path.dirname(__file__), "..", "..",
-    "Weekly update support file - 13.04.2026 v2.xlsx"
-)
+from excel_parser import EXCEL_PATH
 
 
 def _read():
+    if not os.path.isfile(EXCEL_PATH):
+        raise FileNotFoundError(
+            f"Excel workbook not found at {EXCEL_PATH}. "
+            "Set OLIVE_WEEKLY_EXCEL_PATH to the absolute path of the weekly .xlsx on the server."
+        )
     wb = openpyxl.load_workbook(EXCEL_PATH, read_only=True, data_only=True)
     ws = wb["cashflow"]
 

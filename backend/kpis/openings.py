@@ -18,10 +18,19 @@ Operational sheet (Weekly update support file - 13.04.2026 v2, 0-indexed rows/co
   WIP list: after a row containing \"WIP\" (e.g. \"March '26 WIP\"), property names are in col D (index 3),
   keys col H (7), target col I (8).
 """
-from excel_parser import get_sheet_values, safe_int
+from excel_parser import excel_file_available, excel_source_path, get_sheet_values, safe_int
 
 
 def get_openings() -> dict:
+    if not excel_file_available():
+        return {
+            "error": (
+                "Weekly Excel workbook is missing on the server. "
+                "In Railway: Variables - add OLIVE_WEEKLY_EXCEL_PATH with the absolute path to your "
+                ".xlsx (e.g. from a volume), or add the workbook to the deploy image and point the variable there. "
+                f"Default path checked: {excel_source_path()}"
+            ),
+        }
     rows = get_sheet_values("Operational")
     if not rows:
         return {"error": "Operational sheet not found or empty"}
