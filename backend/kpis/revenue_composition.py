@@ -10,7 +10,7 @@ import openpyxl
 
 EXCEL_PATH = os.path.join(
     os.path.dirname(__file__), "..", "..",
-    "Weekly update support file - 06.04.2026 - v4.xlsx"
+    "Weekly update support file - 13.04.2026 v2.xlsx"
 )
 
 def _read_revenue_sheet():

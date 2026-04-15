@@ -1,6 +1,6 @@
 """
 KPI 4: Cashflow — March
-Reads live from Excel (cashflow sheet), Weekly update support file - 06.04.2026 - v1.xlsx
+Reads live from Excel (cashflow sheet), Weekly update support file - 13.04.2026 v2.xlsx
 
 cashflow sheet layout (1-indexed cols):
   col2 = label | col3 = Target | col4 = Received | col5 = Expected
@@ -19,7 +19,7 @@ import openpyxl
 
 EXCEL_PATH = os.path.join(
     os.path.dirname(__file__), "..", "..",
-    "Weekly update support file - 06.04.2026 - v4.xlsx"
+    "Weekly update support file - 13.04.2026 v2.xlsx"
 )
 
 

@@ -204,7 +204,7 @@ export default function OpeningsPage() {
                 <span style={{ display: "block", height: "3px", width: "36px", background: "#E4572E", borderRadius: "2px", marginTop: "6px" }} />
               </h3>
               <span style={{ color: "#E4572E", fontWeight: 700, fontSize: "13px", letterSpacing: "0.3px" }}>
-                April - 2026
+                {data?.current_month || "April - 2026"}
               </span>
             </div>
 
@@ -215,7 +215,7 @@ export default function OpeningsPage() {
                   <col style={{ width: "32%" }} />
                   <col style={{ width: "13%", background: "#FFF4F1" }} />
                   <col /><col /><col /><col />
-                  <col />
+                  <col style={{ width: "11%", background: "#FFFBF0" }} />
                 </colgroup>
                 <thead>
                   <tr style={{ borderBottom: "1px solid #EBEBEB" }}>
@@ -225,7 +225,7 @@ export default function OpeningsPage() {
                     <th style={{ padding: "10px 14px", textAlign: "center", fontSize: "11px", fontWeight: 700, color: "#9CA3AF", textTransform: "uppercase", letterSpacing: "0.5px" }}>W2</th>
                     <th style={{ padding: "10px 14px", textAlign: "center", fontSize: "11px", fontWeight: 700, color: "#9CA3AF", textTransform: "uppercase", letterSpacing: "0.5px" }}>W3</th>
                     <th style={{ padding: "10px 14px", textAlign: "center", fontSize: "11px", fontWeight: 700, color: "#9CA3AF", textTransform: "uppercase", letterSpacing: "0.5px" }}>W4</th>
-                    <th style={{ padding: "10px 14px", textAlign: "center", fontSize: "11px", fontWeight: 700, color: "#9CA3AF", textTransform: "uppercase", letterSpacing: "0.5px" }}>Total</th>
+                    <th style={{ padding: "10px 14px", textAlign: "center", fontSize: "11px", fontWeight: 700, color: "#E4572E", textTransform: "uppercase", letterSpacing: "0.5px", background: "#FFF4F1" }}>April &apos;26</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -239,7 +239,7 @@ export default function OpeningsPage() {
                         <td style={{ padding: "10px 14px", textAlign: "center", color: "#9CA3AF", fontWeight: 500 }}>{brand.props.w2}</td>
                         <td style={{ padding: "10px 14px", textAlign: "center", color: "#9CA3AF", fontWeight: 500 }}>{brand.props.w3}</td>
                         <td style={{ padding: "10px 14px", textAlign: "center", color: "#9CA3AF", fontWeight: 500 }}>{brand.props.w4}</td>
-                        <td style={{ padding: "10px 14px", textAlign: "center", fontWeight: 700, color: "#1A1A1A" }}>{brand.props.total}</td>
+                        <td style={{ padding: "10px 14px", textAlign: "center", fontWeight: 700, color: "#E4572E", background: "#FFFBF0", fontSize: "14px" }}>{brand.props.total}</td>
                       </tr>
                       {/* Keys row */}
                       <tr style={{ borderBottom: "1px solid #EBEBEB" }}>
@@ -249,7 +249,7 @@ export default function OpeningsPage() {
                         <td style={{ padding: "10px 14px", textAlign: "center", color: "#9CA3AF", fontWeight: 500 }}>{brand.keys.w2}</td>
                         <td style={{ padding: "10px 14px", textAlign: "center", color: "#9CA3AF", fontWeight: 500 }}>{brand.keys.w3}</td>
                         <td style={{ padding: "10px 14px", textAlign: "center", color: "#9CA3AF", fontWeight: 500 }}>{brand.keys.w4}</td>
-                        <td style={{ padding: "10px 14px", textAlign: "center", fontWeight: 700, color: "#1A1A1A" }}>{brand.keys.total}</td>
+                        <td style={{ padding: "10px 14px", textAlign: "center", fontWeight: 700, color: "#E4572E", background: "#FFFBF0", fontSize: "14px" }}>{brand.keys.total}</td>
                       </tr>
                     </React.Fragment>
                   ))}
@@ -262,7 +262,7 @@ export default function OpeningsPage() {
                     <td style={{ padding: "12px 14px", textAlign: "center", fontWeight: 700, color: "#1A1A1A" }}>{data?.brands_totals?.props?.w2}</td>
                     <td style={{ padding: "12px 14px", textAlign: "center", fontWeight: 700, color: "#1A1A1A" }}>{data?.brands_totals?.props?.w3}</td>
                     <td style={{ padding: "12px 14px", textAlign: "center", fontWeight: 700, color: "#1A1A1A" }}>{data?.brands_totals?.props?.w4}</td>
-                    <td style={{ padding: "12px 14px", textAlign: "center", fontWeight: 800, color: "#E4572E", fontSize: "15px" }}>{data?.brands_totals?.props?.total}</td>
+                    <td style={{ padding: "12px 14px", textAlign: "center", fontWeight: 800, color: "#E4572E", fontSize: "15px", background: "#FFF4F1" }}>{data?.brands_totals?.props?.total}</td>
                   </tr>
                   {/* TOTAL — Keys */}
                   <tr style={{ background: "#FAFAFA" }}>
@@ -272,7 +272,7 @@ export default function OpeningsPage() {
                     <td style={{ padding: "12px 14px", textAlign: "center", fontWeight: 700, color: "#1A1A1A" }}>{data?.brands_totals?.keys?.w2}</td>
                     <td style={{ padding: "12px 14px", textAlign: "center", fontWeight: 700, color: "#1A1A1A" }}>{data?.brands_totals?.keys?.w3}</td>
                     <td style={{ padding: "12px 14px", textAlign: "center", fontWeight: 700, color: "#1A1A1A" }}>{data?.brands_totals?.keys?.w4}</td>
-                    <td style={{ padding: "12px 14px", textAlign: "center", fontWeight: 800, color: "#E4572E", fontSize: "15px" }}>{data?.brands_totals?.keys?.total}</td>
+                    <td style={{ padding: "12px 14px", textAlign: "center", fontWeight: 800, color: "#E4572E", fontSize: "15px", background: "#FFF4F1" }}>{data?.brands_totals?.keys?.total}</td>
                   </tr>
                 </tbody>
               </table>
@@ -288,8 +288,7 @@ export default function OpeningsPage() {
             <thead>
               <tr style={{ borderBottom: "2px solid #E5E7EB" }}>
                 <th style={{ textAlign: "left", padding: "4px 10px", fontWeight: 700, fontSize: "11px", color: "#9CA3AF", textTransform: "uppercase", letterSpacing: "0.5px" }}>Property</th>
-                <th style={{ textAlign: "center", padding: "4px 10px", fontWeight: 700, fontSize: "11px", color: "#9CA3AF", textTransform: "uppercase", letterSpacing: "0.5px" }}>Keys</th>
-                <th style={{ textAlign: "center", padding: "4px 10px", fontWeight: 700, fontSize: "11px", color: "#9CA3AF", textTransform: "uppercase", letterSpacing: "0.5px" }}>Target</th>
+                <th style={{ textAlign: "center", padding: "4px 10px", fontWeight: 700, fontSize: "11px", color: "#9CA3AF", textTransform: "uppercase", letterSpacing: "0.5px" }}>Handover date</th>
               </tr>
             </thead>
             <tbody>
@@ -299,24 +298,22 @@ export default function OpeningsPage() {
                       <td style={{ padding: "6px 10px", color: "#1A1A1A", fontWeight: 500 }}>
                         <span style={{ color: "#1A1A1A", marginRight: "6px", fontWeight: 800 }}>•</span>{prop.name}
                       </td>
-                      <td style={{ padding: "6px 10px", textAlign: "center", fontWeight: 700, color: "#E4572E" }}>{prop.keys}</td>
                       <td style={{ padding: "6px 10px", textAlign: "center", fontWeight: 500, color: "#6B7280" }}>{prop.target}</td>
                     </tr>
                   ))
                 : (
-                  /* Fallback: hardcoded from Excel screenshot */
-                  [{ name: "Nagavara (JC Reddy)", keys: 105, target: "April '26" },
-                   { name: "Journalist colony (Hyd)", keys: 35, target: "April '26" },
-                   { name: "VIP Road, Vizag (Venkata Savitri Ravisett)", keys: 30, target: "April '26" },
-                   { name: "JP Nagar (Santosh)", keys: 39, target: "April '26" },
-                   { name: "Hulimavu", keys: 56, target: "April '26" },
-                   { name: "Guntur", keys: 36, target: "April '26" },
+                  /* Fallback when API has no wip_properties */
+                  [{ name: "Nagavara (JC Reddy)", target: "April '26" },
+                   { name: "Journalist colony (Hyd)", target: "April '26" },
+                   { name: "VIP Road, Vizag (Venkata Savitri Ravisett)", target: "April '26" },
+                   { name: "JP Nagar (Santosh)", target: "April '26" },
+                   { name: "Hulimavu", target: "April '26" },
+                   { name: "Guntur", target: "April '26" },
                   ].map((prop, idx) => (
                     <tr key={idx} style={{ borderBottom: "1px solid #F3F4F6" }}>
                       <td style={{ padding: "6px 10px", color: "#1A1A1A", fontWeight: 500 }}>
                         <span style={{ color: "#1A1A1A", marginRight: "6px", fontWeight: 800 }}>•</span>{prop.name}
                       </td>
-                      <td style={{ padding: "6px 10px", textAlign: "center", fontWeight: 700, color: "#E4572E" }}>{prop.keys}</td>
                       <td style={{ padding: "6px 10px", textAlign: "center", fontWeight: 500, color: "#6B7280" }}>{prop.target}</td>
                     </tr>
                   ))

@@ -373,7 +373,7 @@ export default function SigningsPage() {
                     <th style={{ padding: "8px 12px", textAlign: "center", fontSize: "11px", fontWeight: 700, color: "#9CA3AF", textTransform: "uppercase", letterSpacing: "0.5px" }}>W2</th>
                     <th style={{ padding: "8px 12px", textAlign: "center", fontSize: "11px", fontWeight: 700, color: "#9CA3AF", textTransform: "uppercase", letterSpacing: "0.5px" }}>W3</th>
                     <th style={{ padding: "8px 12px", textAlign: "center", fontSize: "11px", fontWeight: 700, color: "#9CA3AF", textTransform: "uppercase", letterSpacing: "0.5px" }}>W4</th>
-                    <th style={{ padding: "8px 12px", textAlign: "center", fontSize: "11px", fontWeight: 700, color: "#9CA3AF", textTransform: "uppercase", letterSpacing: "0.5px" }}>Total</th>
+                    <th style={{ padding: "8px 12px", textAlign: "center", fontSize: "11px", fontWeight: 700, color: "#E4572E", textTransform: "uppercase", letterSpacing: "0.5px", background: "#FFF4F1" }}>April '26</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -385,7 +385,7 @@ export default function SigningsPage() {
                       <td style={{ padding: "10px 12px", textAlign: "center", color: "#6B7280" }}>{b.w2}</td>
                       <td style={{ padding: "10px 12px", textAlign: "center", color: "#6B7280" }}>{b.w3}</td>
                       <td style={{ padding: "10px 12px", textAlign: "center", color: "#6B7280" }}>{b.w4}</td>
-                      <td style={{ padding: "10px 12px", textAlign: "center", fontWeight: 700, color: "#1A1A1A" }}>{b.total}</td>
+                      <td style={{ padding: "10px 12px", textAlign: "center", fontWeight: 700, color: "#E4572E", background: "#FFFBF0" }}>{b.total}</td>
                     </tr>
                   ))}
                   {data.brands_totals && (
@@ -396,7 +396,7 @@ export default function SigningsPage() {
                       <td style={{ padding: "10px 12px", textAlign: "center", fontWeight: 700, color: "#1A1A1A" }}>{data.brands_totals.w2}</td>
                       <td style={{ padding: "10px 12px", textAlign: "center", fontWeight: 700, color: "#1A1A1A" }}>{data.brands_totals.w3}</td>
                       <td style={{ padding: "10px 12px", textAlign: "center", fontWeight: 700, color: "#1A1A1A" }}>{data.brands_totals.w4}</td>
-                      <td style={{ padding: "10px 12px", textAlign: "center", fontWeight: 800, color: "#E4572E", fontSize: "15px" }}>{data.brands_totals.total}</td>
+                      <td style={{ padding: "10px 12px", textAlign: "center", fontWeight: 800, color: "#E4572E", fontSize: "15px", background: "#FFF4F1" }}>{data.brands_totals.total}</td>
                     </tr>
                   )}
                 </tbody>
@@ -413,15 +413,25 @@ export default function SigningsPage() {
             }}>
               <h4 style={{ margin: "0 0 10px 0", fontSize: "14px", fontWeight: 800, color: "#1A1A1A" }}>Portfolio Update:</h4>
               <ul style={{ margin: 0, padding: 0, listStyle: "none", fontSize: "12.5px", color: "#4B5563", lineHeight: "1.6" }}>
-                <li style={{ marginBottom: "8px", display: "flex", gap: "8px" }}>
-                  <span style={{ fontWeight: 700, color: "#E4572E" }}>1.</span>
-                  <span>Spark Indore: A Letter of Intent (LOI) was executed on March 30th.</span>
-                </li>
-                <li style={{ display: "flex", gap: "8px" }}>
-                  <span style={{ fontWeight: 700, color: "#E4572E" }}>2.</span>
-                  <span>Sadahalli, Bangalore: The property has been formally converted from the Olive brand to Spark.</span>
-                </li>
+                {(Array.isArray(data.portfolio_update) ? data.portfolio_update : []).map((text: string, idx, arr) => (
+                  <li
+                    key={idx}
+                    style={{
+                      marginBottom: idx < arr.length - 1 ? "8px" : 0,
+                      display: "flex",
+                      gap: "8px",
+                    }}
+                  >
+                    <span style={{ fontWeight: 700, color: "#E4572E", flexShrink: 0 }}>{idx + 1}.</span>
+                    <span>{text}</span>
+                  </li>
+                ))}
               </ul>
+              {Array.isArray(data.portfolio_update) && data.portfolio_update.length === 0 && (
+                <p style={{ margin: 0, fontSize: "12px", color: "#9CA3AF", fontStyle: "italic" }}>
+                  Add rows under &quot;Portfolio Update:&quot; in the Signings sheet to show items here.
+                </p>
+              )}
             </div>
           </div>
       </div>
