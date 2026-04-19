@@ -1,8 +1,8 @@
 import openpyxl
-import os
 
-filepath = "../19.Olive-Weekly Status update_23-Mar-2026.xlsx"
-wb = openpyxl.load_workbook(filepath)
+from excel_parser import EXCEL_PATH
+
+wb = openpyxl.load_workbook(EXCEL_PATH)
 
 # 1. TA FEE - Inject W1, W2, W3, W4, Target, Expected, Collected Outstanding
 ta_sheet = wb["TA Fee"]
@@ -69,5 +69,5 @@ for m in pi_mock:
     pi_sheet.cell(row=m["row"], column=pi_start_col+6).value = m["rcv"]
     pi_sheet.cell(row=m["row"], column=pi_start_col+7).value = m["exp"]
 
-wb.save(filepath)
+wb.save(EXCEL_PATH)
 print("Data successfully injected.")

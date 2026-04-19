@@ -1,6 +1,6 @@
 """
 KPI 4: Cashflow — March
-Reads live from Excel (cashflow sheet), Weekly update support file - 13.04.2026 v2.xlsx
+Reads live from Excel (cashflow sheet), Weekly update - 20.04.2026 v5.xlsx
 
 cashflow sheet layout (1-indexed cols):
   col2 = label | col3 = Target | col4 = Received | col5 = Expected
@@ -17,15 +17,12 @@ cashflow sheet layout (1-indexed cols):
 import os
 import openpyxl
 
-from excel_parser import EXCEL_PATH
+from excel_parser import EXCEL_PATH, excel_workbook_missing_message
 
 
 def _read():
     if not os.path.isfile(EXCEL_PATH):
-        raise FileNotFoundError(
-            f"Excel workbook not found at {EXCEL_PATH}. "
-            "Set OLIVE_WEEKLY_EXCEL_PATH to the absolute path of the weekly .xlsx on the server."
-        )
+        raise FileNotFoundError(excel_workbook_missing_message())
     wb = openpyxl.load_workbook(EXCEL_PATH, read_only=True, data_only=True)
     ws = wb["cashflow"]
 

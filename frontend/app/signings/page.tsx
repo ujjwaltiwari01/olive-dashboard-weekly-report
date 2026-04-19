@@ -11,6 +11,11 @@ import { fetchKPI } from "../../lib/api";
 const REFRESH = 60_000;
 const RECENT_N = 6; // Months to highlight with data labels
 
+/** Remove Excel’s own "1." / "2)" prefixes so UI numbering is a single clean sequence. */
+function stripLeadingEnumeration(s: string): string {
+  return s.replace(/^\s*\d+\s*[\.)]\s*/, "").trim();
+}
+
 const COLORS = {
   Olive: "#1A1A1A",
   Open:  "#E4572E",
@@ -412,21 +417,39 @@ export default function SigningsPage() {
               marginTop: "auto",
             }}>
               <h4 style={{ margin: "0 0 10px 0", fontSize: "14px", fontWeight: 800, color: "#1A1A1A" }}>Portfolio Update:</h4>
-              <ul style={{ margin: 0, padding: 0, listStyle: "none", fontSize: "12.5px", color: "#4B5563", lineHeight: "1.6" }}>
-                {(Array.isArray(data.portfolio_update) ? data.portfolio_update : []).map((text: string, idx, arr) => (
-                  <li
-                    key={idx}
-                    style={{
-                      marginBottom: idx < arr.length - 1 ? "8px" : 0,
-                      display: "flex",
-                      gap: "8px",
-                    }}
-                  >
-                    <span style={{ fontWeight: 700, color: "#E4572E", flexShrink: 0 }}>{idx + 1}.</span>
-                    <span>{text}</span>
-                  </li>
-                ))}
-              </ul>
+              {(() => {
+                const portfolioRows = Array.isArray(data.portfolio_update) ? data.portfolio_update : [];
+                if (portfolioRows.length === 0) return null;
+                const bodyRows = portfolioRows.slice(1);
+                return (
+                  <>
+                    <div style={{
+                      fontSize: "12px",
+                      fontWeight: 800,
+                      color: "#6B7280",
+                      marginBottom: bodyRows.length ? "10px" : 0,
+                      letterSpacing: "0.02em",
+                    }}>Open brand</div>
+                    <ul style={{ margin: 0, padding: 0, listStyle: "none", fontSize: "12.5px", color: "#4B5563", lineHeight: "1.6" }}>
+                      {bodyRows.map((text: string, idx, arr) => (
+                        <li
+                          key={idx}
+                          style={{
+                            marginBottom: idx < arr.length - 1 ? "8px" : 0,
+                            display: "flex",
+                            gap: "8px",
+                            alignItems: "flex-start",
+                          }}
+                        >
+                          <span style={{ fontWeight: 700, color: "#E4572E", flexShrink: 0 }}>{idx + 1}.</span>
+                          <span style={{ fontWeight: 800, color: "#1A1A1A", flexShrink: 0 }} aria-hidden>•</span>
+                          <span>{stripLeadingEnumeration(text)}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </>
+                );
+              })()}
               {Array.isArray(data.portfolio_update) && data.portfolio_update.length === 0 && (
                 <p style={{ margin: 0, fontSize: "12px", color: "#9CA3AF", fontStyle: "italic" }}>
                   Add rows under &quot;Portfolio Update:&quot; in the Signings sheet to show items here.

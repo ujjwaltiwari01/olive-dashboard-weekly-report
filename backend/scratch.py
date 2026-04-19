@@ -1,6 +1,8 @@
 import openpyxl
 
-wb = openpyxl.load_workbook('19.Olive-Weekly Status update_23-Mar-2026.xlsx', data_only=True)
+from excel_parser import EXCEL_PATH
+
+wb = openpyxl.load_workbook(EXCEL_PATH, data_only=True)
 for sheet_name in wb.sheetnames:
     ws = wb[sheet_name]
     for r_idx, row in enumerate(ws.iter_rows(values_only=True), 1):

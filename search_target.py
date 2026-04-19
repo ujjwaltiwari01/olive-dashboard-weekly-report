@@ -1,5 +1,13 @@
-﻿import pandas as pd
-xls = pd.ExcelFile("d:/olive weekly report dashboard/Weekly update support file - 13.04.2026 v2.xlsx")
+﻿import os
+import sys
+
+import pandas as pd
+
+_ROOT = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, os.path.join(_ROOT, "backend"))
+from excel_parser import EXCEL_PATH  # noqa: E402
+
+xls = pd.ExcelFile(EXCEL_PATH)
 try:
     for sheet in xls.sheet_names:
         df = pd.read_excel(xls, sheet_name=sheet, header=None)

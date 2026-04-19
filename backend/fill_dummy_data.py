@@ -1,8 +1,8 @@
 import openpyxl
-import os
 
-excel_path = './19.Olive-Weekly Status update_23-Mar-2026.xlsx'
-wb = openpyxl.load_workbook(excel_path)
+from excel_parser import EXCEL_PATH
+
+wb = openpyxl.load_workbook(EXCEL_PATH)
 sheet = wb['Signings']
 
 # Find the next empty row, typically around 200
@@ -45,5 +45,5 @@ for row_idx, row_data in enumerate(dummy_data, start=start_row + 1):
     for col_idx, val in enumerate(row_data, start=1):
         sheet.cell(row=row_idx, column=col_idx, value=val)
 
-wb.save(excel_path)
+wb.save(EXCEL_PATH)
 print(f"Dummy data inserted from row {start_row} to {start_row + len(dummy_data)}")

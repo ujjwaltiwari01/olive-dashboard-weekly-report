@@ -1,10 +1,10 @@
 """
-Excel Parser — reads the Olive Weekly Status Update xlsx file
-and returns structured data for each KPI module.
+Excel Parser — reads the CFO weekly workbook
+`Weekly update - 20.04.2026 v5.xlsx` (multi-sheet).
 
 Production (Railway, Docker): set OLIVE_WEEKLY_EXCEL_PATH or EXCEL_PATH to an absolute path
-where the weekly workbook is stored (volume mount, build artifact, etc.). If unset, the file
-next to the repo root is used: Weekly update support file - 13.04.2026 v2.xlsx
+where that workbook is stored (volume mount, build artifact, etc.). If unset, the file
+next to the repo root is used: Weekly update - 20.04.2026 v5.xlsx
 """
 import os
 import time
@@ -12,7 +12,9 @@ from typing import Any
 import openpyxl
 import pandas as pd
 
-_DEFAULT_WORKBOOK = "Weekly update support file - 13.04.2026 v2.xlsx"
+# Canonical weekly workbook at repo root (override with OLIVE_WEEKLY_EXCEL_PATH / EXCEL_PATH).
+WEEKLY_WORKBOOK_FILENAME = "Weekly update - 20.04.2026 v5.xlsx"
+_DEFAULT_WORKBOOK = WEEKLY_WORKBOOK_FILENAME
 
 
 def resolve_excel_path() -> str:
@@ -33,6 +35,17 @@ def excel_source_path() -> str:
 
 def excel_file_available() -> bool:
     return os.path.isfile(EXCEL_PATH)
+
+
+def excel_workbook_missing_message() -> str:
+    """Single user-facing hint when the weekly xlsx is absent (API / exceptions)."""
+    return (
+        "Weekly Excel workbook is missing. "
+        f"Add `{WEEKLY_WORKBOOK_FILENAME}` at the repository root (beside `backend/` and `frontend/`), "
+        "or set OLIVE_WEEKLY_EXCEL_PATH / EXCEL_PATH to its absolute path (e.g. Railway Variables). "
+        f"Resolved path: {excel_source_path()}"
+    )
+
 
 _cache: dict[str, Any] = {}
 _cache_mtime: float = 0.0

@@ -1,5 +1,6 @@
 """
-KPI 3: Revenue Composition — reads live from Excel (Revenue sheet)
+KPI 3: Revenue Composition — reads live from Excel (Revenue sheet in
+`Weekly update - 20.04.2026 v5.xlsx`)
 
 SECTION 1: Target vs Actual (March'26)        → rows 5,6,8  | achievement col J (10)
 SECTION 2: YoY Growth (March'25 vs March'26) → rows 14,15,17 | YoY col J (10)
@@ -8,15 +9,12 @@ SECTION 3: YoY Growth (Existing Portfolio)    → rows 23,24,26 | YoY col J (10)
 import os
 import openpyxl
 
-from excel_parser import EXCEL_PATH
+from excel_parser import EXCEL_PATH, excel_workbook_missing_message
 
 
 def _read_revenue_sheet():
     if not os.path.isfile(EXCEL_PATH):
-        raise FileNotFoundError(
-            f"Excel workbook not found at {EXCEL_PATH}. "
-            "Set OLIVE_WEEKLY_EXCEL_PATH to the absolute path of the weekly .xlsx on the server."
-        )
+        raise FileNotFoundError(excel_workbook_missing_message())
     wb = openpyxl.load_workbook(EXCEL_PATH, read_only=True, data_only=True)
     ws = wb["Revenue"]
 

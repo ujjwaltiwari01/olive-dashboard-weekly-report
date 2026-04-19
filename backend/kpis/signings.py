@@ -1,18 +1,24 @@
 """
 KPI 1: Signings — Deal closures vs targets per Brand with Weekly breakdown
 
-Signings sheet (Weekly update support file - 13.04.2026 v2 layout, 0-indexed rows/cols):
+Signings sheet (Weekly update - 20.04.2026 v5.xlsx layout, 0-indexed rows/cols):
   Row 2  = Olive Total Keys     | Cols: B = brought forward, C..O = Apr'25..Apr'26
   Row 7  = Spark Total Keys
   Row 12 = Open   Total Keys
   Cumulative properties / keys on the rows below each brand block.
   Weekly (April execution): rows 23–25 = Open, Olive, Spark
     col A = name, B = Mar'26, C–F = W1–W4, G = Total
-  Portfolio Update: label in col A or B (e.g. "1. Portfolio Update:") then bullets in the same column until blank.
+  Portfolio Update: label in col A or B; bullets follow in that column (or A/B fallback). Single blank rows
+  are skipped; block ends after two consecutive blank rows.
 """
 import re
 
-from excel_parser import excel_file_available, excel_source_path, get_sheet_values, safe_int
+from excel_parser import (
+    excel_file_available,
+    excel_workbook_missing_message,
+    get_sheet_values,
+    safe_int,
+)
 
 
 def _portfolio_title_match(text: str) -> bool:
@@ -33,6 +39,23 @@ def _normalize_portfolio_line(text: str) -> str:
     if _PORTFOLIO_OPEN_LINE_LEGACY in text:
         return text.replace(_PORTFOLIO_OPEN_LINE_LEGACY, _PORTFOLIO_OPEN_LINE_PREFERRED, 1)
     return text
+
+
+def _row_portfolio_text(r: list, title_col: int) -> str:
+    """Text for a portfolio row: prefer title_col, then the other A/B column if empty."""
+    for col in (title_col, 1 - title_col) if title_col in (0, 1) else (title_col,):
+        if len(r) <= col:
+            continue
+        cell = r[col]
+        if cell is None:
+            continue
+        if isinstance(cell, str):
+            t = cell.replace("\xa0", " ").strip()
+        else:
+            t = str(cell).strip()
+        if t:
+            return t
+    return ""
 
 
 def _portfolio_update_bullets(rows: list[list]) -> list[str]:
@@ -58,19 +81,21 @@ def _portfolio_update_bullets(rows: list[list]) -> list[str]:
         return []
 
     out: list[str] = []
-    for j in range(start_idx, min(start_idx + 25, len(rows))):
+    blank_run = 0
+    for j in range(start_idx, min(start_idx + 60, len(rows))):
         r = rows[j]
-        if not r or len(r) <= title_col:
-            break
-        cell = r[title_col]
-        if cell is None:
-            break
-        if isinstance(cell, str):
-            text = cell.replace("\xa0", " ").strip()
-        else:
-            text = str(cell).strip() if cell is not None else ""
+        if not r:
+            blank_run += 1
+            if blank_run >= 2:
+                break
+            continue
+        text = _row_portfolio_text(r, title_col)
         if not text:
-            break
+            blank_run += 1
+            if blank_run >= 2:
+                break
+            continue
+        blank_run = 0
         out.append(_normalize_portfolio_line(text))
     return out
 
@@ -86,11 +111,7 @@ def _signing_rows():
 def get_signings() -> dict:
     if not excel_file_available():
         return {
-            "error": (
-                "Weekly Excel workbook is missing on the server. "
-                "Set OLIVE_WEEKLY_EXCEL_PATH to the absolute path of your .xlsx file. "
-                f"Checked: {excel_source_path()}"
-            ),
+            "error": excel_workbook_missing_message(),
             "portfolio_update": [],
         }
     rows = _signing_rows()
@@ -152,10 +173,18 @@ def get_signings() -> dict:
             "w1": w1, "w2": w2, "w3": w3, "w4": w4, "total": total,
         }
 
+    def _shift_open_w4_into_w3_if_w3_empty(b: dict) -> dict:
+        if b.get("name") != "Open":
+            return b
+        w3, w4 = b.get("w3") or 0, b.get("w4") or 0
+        if w3 == 0 and w4 != 0:
+            return {**b, "w3": w4, "w4": 0}
+        return b
+
     brands_list = [
         get_brand_weekly(24, "Olive", OLIVE_KEYS),
         get_brand_weekly(25, "Spark", SPARK_KEYS),
-        get_brand_weekly(23, "Open", OPEN_KEYS),
+        _shift_open_w4_into_w3_if_w3_empty(get_brand_weekly(23, "Open", OPEN_KEYS)),
     ]
 
     table_totals = {

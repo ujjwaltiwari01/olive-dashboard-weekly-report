@@ -2,7 +2,9 @@ import openpyxl
 import os
 import random
 
-FILE_PATH = os.path.join(os.path.dirname(__file__), "..", "19.Olive-Weekly Status update_23-Mar-2026.xlsx")
+from excel_parser import EXCEL_PATH
+
+FILE_PATH = EXCEL_PATH
 
 def fill_mar25_data():
     if not os.path.exists(FILE_PATH):

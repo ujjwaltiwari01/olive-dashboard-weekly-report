@@ -1,5 +1,10 @@
 import re
-from excel_parser import excel_file_available, excel_source_path, get_sheet_values, safe_int
+from excel_parser import (
+    excel_file_available,
+    excel_workbook_missing_message,
+    get_sheet_values,
+    safe_int,
+)
 
 
 def _cell_b(rows, ri: int) -> str | None:
@@ -24,13 +29,7 @@ def _find_row_b(rows, pred, start: int = 0) -> int | None:
 
 def get_collections() -> dict:
     if not excel_file_available():
-        return {
-            "error": (
-                "Weekly Excel workbook is missing on the server. "
-                "Set OLIVE_WEEKLY_EXCEL_PATH to the absolute path of your .xlsx file. "
-                f"Checked: {excel_source_path()}"
-            ),
-        }
+        return {"error": excel_workbook_missing_message()}
     rows = get_sheet_values("Inflow")
     if not rows:
         return {"error": "Inflow sheet not found or empty"}

@@ -10,6 +10,29 @@ import { fetchKPI } from "../../lib/api";
 const REFRESH = 60_000;
 const RECENT_N = 6;
 
+/** Split Excel narrative (double newlines / line breaks) into separate numbered portfolio lines. */
+function expandOperationalPortfolioLines(chunks: string[] | undefined): string[] {
+  if (!chunks?.length) return [];
+  const out: string[] = [];
+  for (const chunk of chunks) {
+    const raw = String(chunk ?? "").replace(/\r\n/g, "\n").trim();
+    if (!raw) continue;
+    const blocks = raw.split(/\n\s*\n+/).map((s) => s.trim()).filter(Boolean);
+    if (blocks.length > 1) {
+      out.push(...blocks);
+      continue;
+    }
+    const lines = raw.split("\n").map((s) => s.trim()).filter(Boolean);
+    out.push(...lines);
+  }
+  return out;
+}
+
+/** Remove Excel’s own "1." / "2)" prefixes so UI numbering is a single clean sequence. */
+function stripLeadingEnumeration(s: string): string {
+  return s.replace(/^\s*\d+\s*[\.)]\s*/, "").trim();
+}
+
 const COLORS = {
   Olive: "#1A1A1A",
   Open:  "#E4572E",
@@ -281,46 +304,119 @@ export default function OpeningsPage() {
 
         </div>{/* end top row */}
 
-        {/* ── APRIL'26 WIP CARD (restricted width) ─────────────────── */}
-        <div style={{ ...cardStyle, padding: "14px 20px", maxWidth: "650px" }}>
-          <h3 style={{ ...contextHeaderStyle, fontSize: "11px", marginBottom: "12px", color: "#E4572E" }}>April&apos;26 WIP — Olive</h3>
-          <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "12px" }}>
-            <thead>
-              <tr style={{ borderBottom: "2px solid #E5E7EB" }}>
-                <th style={{ textAlign: "left", padding: "4px 10px", fontWeight: 700, fontSize: "11px", color: "#9CA3AF", textTransform: "uppercase", letterSpacing: "0.5px" }}>Property</th>
-                <th style={{ textAlign: "center", padding: "4px 10px", fontWeight: 700, fontSize: "11px", color: "#9CA3AF", textTransform: "uppercase", letterSpacing: "0.5px" }}>Handover date</th>
-              </tr>
-            </thead>
-            <tbody>
-              {(data?.wip_properties ?? []).length > 0
-                ? (data.wip_properties as any[]).map((prop: any, idx: number) => (
-                    <tr key={idx} style={{ borderBottom: "1px solid #F3F4F6" }}>
-                      <td style={{ padding: "6px 10px", color: "#1A1A1A", fontWeight: 500 }}>
-                        <span style={{ color: "#1A1A1A", marginRight: "6px", fontWeight: 800 }}>•</span>{prop.name}
+        {/* ── APRIL'26 WIP + PORTFOLIO — same 50/50 flex as chart | weekly row ───── */}
+        <div style={{ display: "flex", gap: "16px", alignItems: "stretch", width: "100%" }}>
+          <div style={{
+            ...cardStyle,
+            flex: "1 1 0%",
+            minWidth: 0,
+            display: "flex",
+            flexDirection: "column",
+            padding: "14px 20px",
+          }}>
+            <h3 style={{ ...contextHeaderStyle, fontSize: "11px", marginBottom: "12px", color: "#E4572E" }}>April&apos;26 WIP — Olive</h3>
+            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "12px", tableLayout: "fixed" }}>
+              <colgroup>
+                <col style={{ width: "42%" }} />
+                <col style={{ width: "29%" }} />
+                <col style={{ width: "29%", background: "#FFF4F1" }} />
+              </colgroup>
+              <thead>
+                <tr style={{ borderBottom: "2px solid #E5E7EB" }}>
+                  <th style={{ textAlign: "left", padding: "4px 10px", fontWeight: 700, fontSize: "11px", color: "#9CA3AF", textTransform: "uppercase", letterSpacing: "0.5px" }}>Property</th>
+                  <th style={{ textAlign: "center", padding: "4px 10px", fontWeight: 700, fontSize: "11px", color: "#9CA3AF", textTransform: "uppercase", letterSpacing: "0.5px" }}>Handover date</th>
+                  <th style={{
+                    textAlign: "center",
+                    padding: "6px 10px",
+                    fontWeight: 700,
+                    fontSize: "11px",
+                    color: "#E4572E",
+                    textTransform: "uppercase",
+                    letterSpacing: "0.5px",
+                    background: "#FFF4F1",
+                  }}>Go-live date</th>
+                </tr>
+              </thead>
+              <tbody>
+                {(data?.wip_properties ?? []).length > 0
+                  ? (data.wip_properties as any[]).map((prop: any, idx: number) => (
+                      <tr key={idx} style={{ borderBottom: "1px solid #F3F4F6" }}>
+                        <td style={{ padding: "6px 10px", color: "#1A1A1A", fontWeight: 500, wordBreak: "break-word", overflowWrap: "anywhere" }}>
+                          <span style={{ color: "#1A1A1A", marginRight: "6px", fontWeight: 800 }}>•</span>{prop.name}
+                        </td>
+                        <td style={{ padding: "6px 10px", textAlign: "center", fontWeight: 500, color: "#6B7280" }}>{prop.target}</td>
+                        <td style={{
+                          padding: "6px 10px",
+                          textAlign: "center",
+                          fontWeight: 700,
+                          fontSize: "12px",
+                          color: "#E4572E",
+                          background: "#FFF4F1",
+                        }}>{prop.go_live ?? "—"}</td>
+                      </tr>
+                    ))
+                  : (
+                    <tr>
+                      <td colSpan={3} style={{ padding: "12px 10px", color: "#9CA3AF", fontSize: "12px", fontStyle: "italic" }}>
+                        No WIP rows found in the Operational sheet.
                       </td>
-                      <td style={{ padding: "6px 10px", textAlign: "center", fontWeight: 500, color: "#6B7280" }}>{prop.target}</td>
                     </tr>
-                  ))
-                : (
-                  /* Fallback when API has no wip_properties */
-                  [{ name: "Nagavara (JC Reddy)", target: "April '26" },
-                   { name: "Journalist colony (Hyd)", target: "April '26" },
-                   { name: "VIP Road, Vizag (Venkata Savitri Ravisett)", target: "April '26" },
-                   { name: "JP Nagar (Santosh)", target: "April '26" },
-                   { name: "Hulimavu", target: "April '26" },
-                   { name: "Guntur", target: "April '26" },
-                  ].map((prop, idx) => (
-                    <tr key={idx} style={{ borderBottom: "1px solid #F3F4F6" }}>
-                      <td style={{ padding: "6px 10px", color: "#1A1A1A", fontWeight: 500 }}>
-                        <span style={{ color: "#1A1A1A", marginRight: "6px", fontWeight: 800 }}>•</span>{prop.name}
-                      </td>
-                      <td style={{ padding: "6px 10px", textAlign: "center", fontWeight: 500, color: "#6B7280" }}>{prop.target}</td>
-                    </tr>
-                  ))
-                )
+                  )}
+              </tbody>
+            </table>
+          </div>
+
+          <div style={{
+            ...cardStyle,
+            flex: "1 1 0%",
+            minWidth: 0,
+            display: "flex",
+            flexDirection: "column",
+            padding: "14px 20px",
+            border: "1px solid #FECAB4",
+            background: "#FFFBF8",
+          }}>
+            <h3 style={{ ...contextHeaderStyle, fontSize: "11px", marginBottom: "12px", color: "#E4572E" }}>Portfolio Update</h3>
+            {(() => {
+              const portfolioLines = expandOperationalPortfolioLines(data?.operational_portfolio as string[] | undefined);
+              if (portfolioLines.length === 0) {
+                return (
+                  <p style={{ margin: 0, fontSize: "12px", color: "#9CA3AF", fontStyle: "italic" }}>
+                    Add narrative under Portfolio Update in the Operational sheet (column B) above the WIP table.
+                  </p>
+                );
               }
-            </tbody>
-          </table>
+              const bodyLines = portfolioLines.slice(1);
+              return (
+                <>
+                  <div style={{
+                    fontSize: "12px",
+                    fontWeight: 800,
+                    color: "#6B7280",
+                    marginBottom: bodyLines.length ? "10px" : 0,
+                    letterSpacing: "0.02em",
+                  }}>Open brand</div>
+                  <ul style={{
+                    margin: 0,
+                    padding: 0,
+                    listStyle: "none",
+                    fontSize: "12.5px",
+                    color: "#374151",
+                    lineHeight: 1.55,
+                    wordBreak: "break-word",
+                    overflowWrap: "anywhere",
+                  }}>
+                    {bodyLines.map((text, idx, arr) => (
+                      <li key={idx} style={{ marginBottom: idx < arr.length - 1 ? "10px" : 0, whiteSpace: "pre-wrap" }}>
+                        <span style={{ fontWeight: 800, color: "#E4572E", marginRight: "6px" }}>{idx + 1}.</span>
+                        {stripLeadingEnumeration(text)}
+                      </li>
+                    ))}
+                  </ul>
+                </>
+              );
+            })()}
+          </div>
         </div>
 
       </div>{/* end outer column */}

@@ -245,7 +245,7 @@ export default function RevenueCompositionPage() {
         style={{ marginBottom: "32px", borderBottom: "1px solid #E5E7EB", paddingBottom: "16px" }}
       >
         <h1 style={{ fontSize: "26px", fontWeight: 700, color: "#111827", margin: "0 0 4px 0" }}>
-          Revenue Composition — 1 April&apos;26 to 12 April&apos;26
+          Revenue Composition — 1 April&apos;26 to 17 April&apos;26
         </h1>
         <p style={{ margin: 0, fontSize: "13px", color: "#9CA3AF", fontWeight: 500 }}>Same period comparison</p>
       </div>

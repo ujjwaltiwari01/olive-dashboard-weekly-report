@@ -24,6 +24,9 @@ npm run dev
 ```
 
 #### Backend
+
+Place the CFO weekly workbook **`Weekly update - 20.04.2026 v5.xlsx`** at the repository root (or set `OLIVE_WEEKLY_EXCEL_PATH` / `EXCEL_PATH` to its absolute path).
+
 ```bash
 cd backend
 python main.py
