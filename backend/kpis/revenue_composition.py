@@ -1,6 +1,6 @@
 """
 KPI 3: Revenue Composition — reads live from Excel (Revenue sheet in
-`Weekly update - 20.04.2026 v5.xlsx`)
+`Weekly update - 20.04.2026 v6.xlsx`)
 
 SECTION 1: Target vs Actual (March'26)        → rows 5,6,8  | achievement col J (10)
 SECTION 2: YoY Growth (March'25 vs March'26) → rows 14,15,17 | YoY col J (10)

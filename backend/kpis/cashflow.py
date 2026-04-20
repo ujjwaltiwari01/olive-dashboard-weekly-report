@@ -1,6 +1,6 @@
 """
 KPI 4: Cashflow — March
-Reads live from Excel (cashflow sheet), Weekly update - 20.04.2026 v5.xlsx
+Reads live from Excel (cashflow sheet), Weekly update - 20.04.2026 v6.xlsx
 
 cashflow sheet layout (1-indexed cols):
   col2 = label | col3 = Target | col4 = Received | col5 = Expected

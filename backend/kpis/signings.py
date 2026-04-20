@@ -1,7 +1,7 @@
 """
 KPI 1: Signings — Deal closures vs targets per Brand with Weekly breakdown
 
-Signings sheet (Weekly update - 20.04.2026 v5.xlsx layout, 0-indexed rows/cols):
+Signings sheet (Weekly update - 20.04.2026 v6.xlsx layout, 0-indexed rows/cols):
   Row 2  = Olive Total Keys     | Cols: B = brought forward, C..O = Apr'25..Apr'26
   Row 7  = Spark Total Keys
   Row 12 = Open   Total Keys

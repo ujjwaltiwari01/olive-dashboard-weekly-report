@@ -1,10 +1,10 @@
 """
 Excel Parser — reads the CFO weekly workbook
-`Weekly update - 20.04.2026 v5.xlsx` (multi-sheet).
+`Weekly update - 20.04.2026 v6.xlsx` (multi-sheet).
 
 Production (Railway, Docker): set OLIVE_WEEKLY_EXCEL_PATH or EXCEL_PATH to an absolute path
 where that workbook is stored (volume mount, build artifact, etc.). If unset, the file
-next to the repo root is used: Weekly update - 20.04.2026 v5.xlsx
+next to the repo root is used: Weekly update - 20.04.2026 v6.xlsx
 """
 import os
 import time
@@ -13,7 +13,7 @@ import openpyxl
 import pandas as pd
 
 # Canonical weekly workbook at repo root (override with OLIVE_WEEKLY_EXCEL_PATH / EXCEL_PATH).
-WEEKLY_WORKBOOK_FILENAME = "Weekly update - 20.04.2026 v5.xlsx"
+WEEKLY_WORKBOOK_FILENAME = "Weekly update - 20.04.2026 v6.xlsx"
 _DEFAULT_WORKBOOK = WEEKLY_WORKBOOK_FILENAME
 
 

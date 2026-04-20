@@ -29,7 +29,7 @@ KPI Layer (8 KPI Modules)
         ↓
 Next.js Dashboard (UI)
 📦 Data Source
-Single Excel file (multi-sheet): `Weekly update - 20.04.2026 v5.xlsx`
+Single Excel file (multi-sheet): `Weekly update - 20.04.2026 v6.xlsx`
 Updated weekly by CFO
 Must follow strict schema
 📊 3. KPI FRAMEWORK (CORE OF SYSTEM)

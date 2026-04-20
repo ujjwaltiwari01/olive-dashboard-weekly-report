@@ -1,7 +1,7 @@
 """
 KPI 2: Openings — Inventory Creation (Keys Added)
 
-Operational sheet (Weekly update - 20.04.2026 v5.xlsx, 0-indexed rows/cols):
+Operational sheet (Weekly update - 20.04.2026 v6.xlsx, 0-indexed rows/cols):
   Monthly: header ~row 3; Olive Total Keys row 5 (idx 4), cumulative keys/props rows 7–8 (idx 6–7);
   Open Total Keys row 10 (idx 9), cumulative keys/props rows 12–13 (idx 11–12).
 
@@ -204,7 +204,7 @@ def get_openings() -> dict:
             "Open_cum_props":  open_cum_props or 0,
         })
 
-    # April'26 WIP + Operational Portfolio (v5: header col H; properties H–J; bullets col B below header)
+    # April'26 WIP + Operational Portfolio (v6: header col H; properties H–J; bullets col B below header)
     wip_header = _find_wip_header_row(rows)
     operational_portfolio: list[str] = []
     wip_properties: list[dict] = []
@@ -238,7 +238,7 @@ def get_openings() -> dict:
                 "go_live": "—",
             })
 
-    # Weekly execution — March'26 col C (2), weeks cols D–G (3–6); v5 data rows 21–22 (Open), 24–25 (Olive)
+    # Weekly execution — March'26 col C (2), weeks cols D–G (3–6); v6 data rows 21–22 (Open), 24–25 (Olive)
     APR_COL = _apr_month_col(rows)
 
     def mcell(r, c):
