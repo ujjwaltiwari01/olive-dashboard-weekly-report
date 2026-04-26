@@ -20,7 +20,12 @@ export default function InflowBreakdownPage() {
   }, []);
 
   if (loading) return <div style={{ padding: "40px", fontSize: "18px", color: "#6B7280" }}>Syncing native Inflow records...</div>;
-  if (!data) return <div style={{ padding: "40px", color: "#DC2626" }}>Failed to parse Inflow Breakdown payload.</div>;
+  if (!data || data.error)
+    return (
+      <div style={{ padding: "40px", color: "#DC2626" }}>
+        Failed to load Inflow Breakdown.{data?.error ? ` ${data.error}` : ""}
+      </div>
+    );
 
   const { ta_fees = [], mgmt_fees = [], profit_incentive = [] } = data;
 

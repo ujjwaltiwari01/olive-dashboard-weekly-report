@@ -1,7 +1,7 @@
 """
 KPI 1: Signings — Deal closures vs targets per Brand with Weekly breakdown
 
-Signings sheet (Weekly update - 20.04.2026 v6.xlsx layout, 0-indexed rows/cols):
+Signings sheet (Weekly update - 27.04.2024 v2.xlsx layout, 0-indexed rows/cols):
   Row 2  = Olive Total Keys     | Cols: B = brought forward, C..O = Apr'25..Apr'26
   Row 7  = Spark Total Keys
   Row 12 = Open   Total Keys
@@ -173,18 +173,10 @@ def get_signings() -> dict:
             "w1": w1, "w2": w2, "w3": w3, "w4": w4, "total": total,
         }
 
-    def _shift_open_w4_into_w3_if_w3_empty(b: dict) -> dict:
-        if b.get("name") != "Open":
-            return b
-        w3, w4 = b.get("w3") or 0, b.get("w4") or 0
-        if w3 == 0 and w4 != 0:
-            return {**b, "w3": w4, "w4": 0}
-        return b
-
     brands_list = [
         get_brand_weekly(24, "Olive", OLIVE_KEYS),
         get_brand_weekly(25, "Spark", SPARK_KEYS),
-        _shift_open_w4_into_w3_if_w3_empty(get_brand_weekly(23, "Open", OPEN_KEYS)),
+        get_brand_weekly(23, "Open", OPEN_KEYS),
     ]
 
     table_totals = {

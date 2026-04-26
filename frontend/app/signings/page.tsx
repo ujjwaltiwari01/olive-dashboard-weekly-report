@@ -16,6 +16,12 @@ function stripLeadingEnumeration(s: string): string {
   return s.replace(/^\s*\d+\s*[\.)]\s*/, "").trim();
 }
 
+/** First portfolio line from sheet — hide as subheader when it’s the Open “New Signings” heading. */
+function isNewSigningsOpenBrandLine(s: string): boolean {
+  const t = stripLeadingEnumeration(s).toLowerCase().replace(/\s+/g, " ");
+  return t.includes("new signings") && t.includes("open brand");
+}
+
 const COLORS = {
   Olive: "#1A1A1A",
   Open:  "#E4572E",
@@ -420,16 +426,23 @@ export default function SigningsPage() {
               {(() => {
                 const portfolioRows = Array.isArray(data.portfolio_update) ? data.portfolio_update : [];
                 if (portfolioRows.length === 0) return null;
+                const firstLine = portfolioRows[0] ?? "";
+                const hideSubHeader = isNewSigningsOpenBrandLine(firstLine);
+                const subHeader = hideSubHeader
+                  ? ""
+                  : (stripLeadingEnumeration(firstLine) || "Open brand");
                 const bodyRows = portfolioRows.slice(1);
                 return (
                   <>
-                    <div style={{
-                      fontSize: "12px",
-                      fontWeight: 800,
-                      color: "#6B7280",
-                      marginBottom: bodyRows.length ? "10px" : 0,
-                      letterSpacing: "0.02em",
-                    }}>Open brand</div>
+                    {!hideSubHeader && subHeader ? (
+                      <div style={{
+                        fontSize: "12px",
+                        fontWeight: 800,
+                        color: "#6B7280",
+                        marginBottom: bodyRows.length ? "10px" : 0,
+                        letterSpacing: "0.02em",
+                      }}>{subHeader}</div>
+                    ) : null}
                     <ul style={{ margin: 0, padding: 0, listStyle: "none", fontSize: "12.5px", color: "#4B5563", lineHeight: "1.6" }}>
                       {bodyRows.map((text: string, idx, arr) => (
                         <li

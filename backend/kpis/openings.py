@@ -1,7 +1,7 @@
 """
 KPI 2: Openings — Inventory Creation (Keys Added)
 
-Operational sheet (Weekly update - 20.04.2026 v6.xlsx, 0-indexed rows/cols):
+Operational sheet (Weekly update - 27.04.2024 v2.xlsx, 0-indexed rows/cols):
   Monthly: header ~row 3; Olive Total Keys row 5 (idx 4), cumulative keys/props rows 7–8 (idx 6–7);
   Open Total Keys row 10 (idx 9), cumulative keys/props rows 12–13 (idx 11–12).
 
@@ -43,34 +43,46 @@ def _ordinal_suffix(day: int) -> str:
 
 
 def _go_live_display_from_dmy(d: int, m: int, y: int) -> str:
-    """Ordinal day, full month name, full year; May 15 2027 → 2026 for this milestone."""
-    if m == 5 and d == 15 and y == 2027:
-        y = 2026
+    """Ordinal day, full month name, full year."""
     month_name = datetime(y, m, d).strftime("%B")
     return f"{d}{_ordinal_suffix(d)} {month_name} {y}"
 
 
 def _try_parse_go_live_excel_text(s: str) -> str | None:
-    """Cells stored as text (e.g. 15th May '27) are not datetime objects; parse here."""
+    """Cells stored as text are not datetime objects; parse common '15th June 2026' forms."""
     s = s.replace("\xa0", " ").strip()
     if not s:
         return None
     patterns = [
-        # 15th May '27 / 15 May '27 (ASCII or curly apostrophe)
-        r"(?is)^\s*(\d{1,2})\s*(?:st|nd|rd|th)?\s+may\s*['\u2019]?\s*(\d{2,4})\s*$",
-        # 15th May 2027
-        r"(?is)^\s*(\d{1,2})\s*(?:st|nd|rd|th)?\s+may\s+(\d{4})\s*$",
+        # 15th June 2026 / 3rd July 2026 / 15 May '27
+        r"(?is)^\s*(\d{1,2})\s*(?:st|nd|rd|th)?\s+([a-z]+)\s*['\u2019]?\s*(\d{2,4})\s*$",
     ]
     for pat in patterns:
         m = re.match(pat, s)
         if not m:
             continue
         d = int(m.group(1))
-        y_raw = int(m.group(2))
+        month_raw = m.group(2).strip().lower()
+        y_raw = int(m.group(3))
         y = 2000 + y_raw if y_raw < 100 else y_raw
-        if y == 2027 and d == 15:
-            y = 2026
-        return f"{d}{_ordinal_suffix(d)} May {y}"
+        month_map = {
+            "jan": 1, "january": 1,
+            "feb": 2, "february": 2,
+            "mar": 3, "march": 3,
+            "apr": 4, "april": 4,
+            "may": 5,
+            "jun": 6, "june": 6,
+            "jul": 7, "july": 7,
+            "aug": 8, "august": 8,
+            "sep": 9, "sept": 9, "september": 9,
+            "oct": 10, "october": 10,
+            "nov": 11, "november": 11,
+            "dec": 12, "december": 12,
+        }
+        month_num = month_map.get(month_raw)
+        if not month_num:
+            continue
+        return _go_live_display_from_dmy(d, month_num, y)
     return None
 
 
@@ -95,15 +107,6 @@ def _fmt_go_live_date(val) -> str:
             return parsed
         return val.strip()
     return str(val).strip()
-
-
-def _shift_open_w4_into_w3_if_w3_empty(weekly: list[int]) -> list[int]:
-    """If Open week-3 is blank but week-4 has activity, attribute that activity to week 3 (same monthly sum)."""
-    w = list(weekly)
-    if len(w) >= 4 and w[2] == 0 and w[3] != 0:
-        w[2] = w[3]
-        w[3] = 0
-    return w
 
 
 def _find_wip_header_row(rows: list[list]) -> int | None:
@@ -204,7 +207,7 @@ def get_openings() -> dict:
             "Open_cum_props":  open_cum_props or 0,
         })
 
-    # April'26 WIP + Operational Portfolio (v6: header col H; properties H–J; bullets col B below header)
+    # April'26 WIP + Operational Portfolio (v1: header col H; properties H–J; bullets col B below header)
     wip_header = _find_wip_header_row(rows)
     operational_portfolio: list[str] = []
     wip_properties: list[dict] = []
@@ -238,7 +241,7 @@ def get_openings() -> dict:
                 "go_live": "—",
             })
 
-    # Weekly execution — March'26 col C (2), weeks cols D–G (3–6); v6 data rows 21–22 (Open), 24–25 (Olive)
+    # Weekly execution — March'26 col C (2), weeks cols D–G (3–6); v1 data rows 21–22 (Open), 24–25 (Olive)
     APR_COL = _apr_month_col(rows)
 
     def mcell(r, c):
@@ -256,8 +259,6 @@ def get_openings() -> dict:
 
     open_props_mar26, open_props_w = get_row(20)
     open_keys_mar26, open_keys_w = get_row(21)
-    open_props_w = _shift_open_w4_into_w3_if_w3_empty(open_props_w)
-    open_keys_w = _shift_open_w4_into_w3_if_w3_empty(open_keys_w)
     olive_props_mar26, olive_props_w = get_row(23)
     olive_keys_mar26, olive_keys_w = get_row(24)
 

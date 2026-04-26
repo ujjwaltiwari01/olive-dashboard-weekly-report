@@ -35,7 +35,7 @@ export default function BusinessHealthPage() {
   useEffect(() => { load(); const t = setInterval(load, REFRESH); return () => clearInterval(t); }, [load]);
 
   if (loading) return <div style={{ padding: "32px", color: "#64748b" }}>Loading…</div>;
-  if (!data) return <div style={{ padding: "32px" }}>⚠️ API Error</div>;
+  if (!data || data.error) return <div style={{ padding: "32px" }}>⚠️ API Error{data?.error ? ` — ${data.error}` : ""}</div>;
 
   const { summary, risk_score, risk_level, funnel, risk_factors, recommendations, all_insights, efficiency_score } = data;
 

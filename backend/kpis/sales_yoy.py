@@ -1,13 +1,16 @@
 """
 KPI 4: Revenue (YoY Comparison) — Year-over-Year (YoY) revenue comparison with channel mix
-Sheet: Sales
+Sheet: Sales (fallback: Revenue sheet April 2025 vs April 2026 when Sales is absent)
 """
 from excel_parser import get_sheet_values, safe_int
+from kpis.revenue_dashboard_fallback import sales_yoy_from_revenue_sheet
+
 
 def get_sales_yoy() -> dict:
     rows = get_sheet_values("Sales")
     if not rows or len(rows) < 2:
-        return {"error": "Missing Sales data"}
+        fb = sales_yoy_from_revenue_sheet()
+        return fb if fb else {"error": "Missing Sales data"}
 
     # Initialize aggregators
     mar25_totals = {"Walk-in": 0, "Online": 0, "Corporate": 0}

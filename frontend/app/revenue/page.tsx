@@ -48,7 +48,7 @@ export default function RevenuePage() {
             <h3 style={cardHeaderStyle}>Monthly Revenue Mix</h3>
             
             <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end" }}>
-                <span style={{ fontSize: "12px", color: "#6B6B6B", marginBottom: "4px" }}>MoM Growth</span>
+                <span style={{ fontSize: "12px", color: "#6B6B6B", marginBottom: "4px" }}>{mixData.mix_change_label || "MoM Growth"}</span>
                 <span style={{ 
                     background: mixData.mom_pct >= 0 ? "#F0FDF4" : "#FEF2F2", 
                     color: mixData.mom_pct >= 0 ? "#16A34A" : "#DC2626", 
@@ -88,8 +88,8 @@ export default function RevenuePage() {
           </div>
           
           <div style={{ display: "flex", justifyContent: "space-between", marginTop: "16px", paddingTop: "16px", borderTop: "1px dashed #E5E7EB", fontSize: "14px", color: "#4B5563" }}>
-            <div><strong style={{ color: "#1A1A1A"}}>Mar Total:</strong> ₹{mixData.mar_total}L</div>
-            <div><strong style={{ color: "#1A1A1A"}}>Apr Total:</strong> ₹{mixData.apr_total}L</div>
+            <div><strong style={{ color: "#1A1A1A"}}>{mixData.footer_left_label || "Mar Total"}:</strong> ₹{mixData.mar_total}L</div>
+            <div><strong style={{ color: "#1A1A1A"}}>{mixData.footer_right_label || "Apr Total"}:</strong> ₹{mixData.apr_total}L</div>
           </div>
         </div>
 

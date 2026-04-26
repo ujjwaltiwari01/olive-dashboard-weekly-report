@@ -1,13 +1,16 @@
 """
 KPI 3: Sales Mix — Channel-wise sales mix (Walk-in / Online / Corporate) with MoM comparison
-Sheet: Sales
+Sheet: Sales (fallback: Revenue sheet Target vs Actual when Sales is absent)
 """
 from excel_parser import get_sheet_values, safe_int
+from kpis.revenue_dashboard_fallback import sales_mix_from_revenue_sheet
+
 
 def get_sales_mix() -> dict:
     rows = get_sheet_values("Sales")
     if not rows or len(rows) < 2:
-        return {"error": "Missing Sales data"}
+        fb = sales_mix_from_revenue_sheet()
+        return fb if fb else {"error": "Missing Sales data"}
 
     # Initialize aggregators
     # Structure mapping channels exactly to CFO requested naming

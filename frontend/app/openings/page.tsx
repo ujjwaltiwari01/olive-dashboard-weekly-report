@@ -386,6 +386,7 @@ export default function OpeningsPage() {
                   </p>
                 );
               }
+              const subHeader = stripLeadingEnumeration(portfolioLines[0] ?? "") || "Open brand";
               const bodyLines = portfolioLines.slice(1);
               return (
                 <>
@@ -395,7 +396,7 @@ export default function OpeningsPage() {
                     color: "#6B7280",
                     marginBottom: bodyLines.length ? "10px" : 0,
                     letterSpacing: "0.02em",
-                  }}>Open brand</div>
+                  }}>{subHeader}</div>
                   <ul style={{
                     margin: 0,
                     padding: 0,

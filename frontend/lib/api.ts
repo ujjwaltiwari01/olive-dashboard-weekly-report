@@ -1,18 +1,30 @@
 "use client";
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
+function kpiUrl(endpoint: string): string {
+  const custom = (process.env.NEXT_PUBLIC_API_URL || "").trim().replace(/\/$/, "");
+  if (custom) return `${custom}/api/kpi/${endpoint}`;
+  return `/api/kpi/${endpoint}`;
+}
 
 export async function fetchKPI(endpoint: string) {
+  const url = kpiUrl(endpoint);
   try {
-    const res = await fetch(`${API_BASE}/api/kpi/${endpoint}`, {
+    const res = await fetch(url, {
       cache: "no-store",
       headers: { "Content-Type": "application/json" },
     });
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    if (!res.ok) {
+      const text = await res.text();
+      return {
+        error: `HTTP ${res.status}${text ? `: ${text.slice(0, 240)}` : ""}`,
+      };
+    }
     return await res.json();
   } catch (e) {
-    console.error(`Failed to fetch KPI [${endpoint}]:`, e);
-    return null;
+    console.error(`Failed to fetch KPI [${endpoint}] (${url}):`, e);
+    return {
+      error: e instanceof Error ? e.message : "Network error",
+    };
   }
 }
 

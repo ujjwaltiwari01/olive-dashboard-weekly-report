@@ -29,6 +29,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
 
           <main style={{ 
             flex: 1, 
+            minWidth: 0,
             minHeight: "100vh", 
             // When sidebar is open, we push the content if it's small, 
             // but on dashboard we usually overlay or use padding
@@ -55,6 +56,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               margin: "0 auto", 
               padding: "0 40px",
               minHeight: "100vh",
+              minWidth: 0,
+              width: "100%",
               display: "flex",
               flexDirection: "column"
             }}>
@@ -86,7 +89,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               </div>
 
               {/* MAIN CONTENT AREA */}
-              <div style={{ flex: 1, paddingBottom: "60px" }}>
+              <div style={{ flex: 1, minWidth: 0, width: "100%", paddingBottom: "60px" }}>
                 {children}
               </div>
             </div>
