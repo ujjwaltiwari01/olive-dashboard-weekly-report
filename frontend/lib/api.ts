@@ -1,7 +1,9 @@
 "use client";
 
+import { normalizeApiOrigin } from "./normalizeApiOrigin";
+
 function kpiUrl(endpoint: string): string {
-  const custom = (process.env.NEXT_PUBLIC_API_URL || "").trim().replace(/\/$/, "");
+  const custom = normalizeApiOrigin(process.env.NEXT_PUBLIC_API_URL || "");
   if (custom) return `${custom}/api/kpi/${endpoint}`;
   return `/api/kpi/${endpoint}`;
 }
