@@ -1,18 +1,10 @@
 import type { NextConfig } from "next";
 
-/** Where Next.js proxies `/api/*` (FastAPI). Override in Docker / CI. */
-const BACKEND_ORIGIN =
-  process.env.BACKEND_URL?.replace(/\/$/, "") || "http://127.0.0.1:8000";
+/** `/api/*` is proxied at request time by `app/api/[...path]/route.ts` using `BACKEND_URL`,
+ * so production (Vercel) does not depend on this file being evaluated with the correct env
+ * at build time (rewrites used to default to http://127.0.0.1:8000 and break deploys). */
 
 const nextConfig: NextConfig = {
-  async rewrites() {
-    return [
-      {
-        source: "/api/:path*",
-        destination: `${BACKEND_ORIGIN}/api/:path*`,
-      },
-    ];
-  },
   typescript: {
     ignoreBuildErrors: true,
   },

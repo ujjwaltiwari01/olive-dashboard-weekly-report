@@ -652,9 +652,14 @@ export default function RevenueCompositionPage() {
       <div style={pageStyle}>
         <p>⚠️ Cannot load KPI data.{data?.error ? ` ${data.error}` : ""}</p>
         <p style={{ fontSize: "13px", color: "#6B7280", marginTop: "8px" }}>
-          Ensure the FastAPI server is running. With the default setup, run{" "}
-          <code style={{ background: "#F3F4F6", padding: "2px 6px", borderRadius: "4px" }}>uvicorn</code> on port 8000, or set{" "}
-          <code style={{ background: "#F3F4F6", padding: "2px 6px", borderRadius: "4px" }}>NEXT_PUBLIC_API_URL</code> to your API origin.
+          <strong>Local:</strong> run FastAPI with{" "}
+          <code style={{ background: "#F3F4F6", padding: "2px 6px", borderRadius: "4px" }}>uvicorn</code> on port 8000 (the Next app proxies{" "}
+          <code style={{ background: "#F3F4F6", padding: "2px 6px", borderRadius: "4px" }}>/api/*</code> there).{" "}
+          <strong>Vercel + Render:</strong> in the Vercel project set environment variable{" "}
+          <code style={{ background: "#F3F4F6", padding: "2px 6px", borderRadius: "4px" }}>BACKEND_URL</code> to your public API base (e.g.{" "}
+          <code style={{ background: "#F3F4F6", padding: "2px 6px", borderRadius: "4px" }}>https://your-api.onrender.com</code>, no trailing slash), then redeploy.{" "}
+          Alternatively set{" "}
+          <code style={{ background: "#F3F4F6", padding: "2px 6px", borderRadius: "4px" }}>NEXT_PUBLIC_API_URL</code> to that same origin so the browser calls the API directly.
         </p>
       </div>
     );
