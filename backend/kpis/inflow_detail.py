@@ -1,15 +1,8 @@
 """
 KPI 6: Inflow Detail — TA Fee collection per property
-Sheet: TA Fee
-Col 0 = SL
-Col 1 = Property Name
-Col 2 = City
-Col 3 = BD
-Col 4-14 = Monthly collected (Apr'25 → Feb'26)
-Col 15 = Mar'26 Collectable
-Col 16 = Mar'26 Collected
-Col 17 = Mar'26 Due
-Col 18 = Collected till Mar-2026
+
+Primary: sheet `TA Fee` (legacy layout).
+Fallback: sheet `Inflow` — April cashflow breakdown block (cols B–K), W1–W5 + Total + To be collected.
 """
 from excel_parser import get_sheet_values, safe_float
 
@@ -17,17 +10,12 @@ MONTHS = ["Apr'25", "May'25", "Jun'25", "Jul'25", "Aug'25", "Sep'25",
           "Oct'25", "Nov'25", "Dec'25", "Jan'26", "Feb'26"]
 
 
-def get_inflow_detail() -> dict:
-    rows = get_sheet_values("TA Fee")
-    if not rows:
-        return {"properties": [], "summary": {}}
-
+def _from_ta_fee_sheet(rows: list[list]) -> dict:
     properties = []
     total_target = 0.0
     total_collected = 0.0
     total_due = 0.0
 
-    # Data rows start at index 2 (skip header rows 0 and 1)
     for row in rows[2:]:
         if not row or row[1] is None:
             continue
@@ -73,10 +61,113 @@ def get_inflow_detail() -> dict:
             "cumulative": round(cumulative) if cumulative else 0
         })
 
-    # Remove zero-data rows
-    properties = [p for p in properties if p["mar26_target"] > 0 or p["cumulative"] > 0]
+    return properties, total_target, total_collected, total_due
 
-    # Sort by due amount (highest risk first)
+
+def _from_inflow_sheet(rows: list[list]) -> dict:
+    """April'26 TA block between '1. TA fees' and 'Total TA fees' (cols B–K)."""
+    properties = []
+    total_target = 0.0
+    total_collected = 0.0
+    total_due = 0.0
+    brand = "Spark"
+
+    start_i = end_i = None
+    for i, row in enumerate(rows):
+        if not row or len(row) < 2:
+            continue
+        a = str(row[1] or "").replace("\xa0", " ").strip()
+        if start_i is None and "TA" in a.upper() and "FEE" in a.upper() and a.strip().startswith("1"):
+            start_i = i + 1
+            continue
+        if start_i is not None and a.upper() == "TOTAL TA FEES":
+            end_i = i
+            break
+    if start_i is None:
+        return [], 0.0, 0.0, 0.0
+    if end_i is None:
+        end_i = len(rows)
+
+    for row in rows[start_i:end_i]:
+        if not row or len(row) < 10:
+            continue
+        name = str(row[1] or "").replace("\xa0", " ").strip()
+        if not name:
+            continue
+        ul = name.upper()
+        if ul.startswith("A) "):
+            brand = "Spark"
+            continue
+        if ul.startswith("B) "):
+            brand = "Olive"
+            continue
+        if ul.startswith("C) "):
+            brand = "Open"
+            continue
+
+        target = safe_float(row[2]) if len(row) > 2 else None
+        w_vals = []
+        for c in range(4, 9):
+            w_vals.append(safe_float(row[c]) if c < len(row) else None)
+        w_sum = sum((v or 0) for v in w_vals)
+        received = safe_float(row[9]) if len(row) > 9 else None
+        if received is None or received == 0:
+            received = w_sum
+        due = safe_float(row[10]) if len(row) > 10 else 0.0
+        if due is None:
+            due = 0.0
+
+        tgt = float(target or 0)
+        if tgt <= 0 and (received or 0) <= 0 and due <= 0:
+            continue
+
+        total_target += tgt
+        total_collected += float(received or 0)
+        total_due += max(0.0, float(due))
+
+        collection_pct = round((received or 0) / tgt * 100, 1) if tgt else 0.0
+
+        def _rw(i: int) -> float:
+            v = w_vals[i] if i < len(w_vals) else None
+            return round(v or 0)
+
+        properties.append({
+            "name": name,
+            "city": brand or "—",
+            "bd": "—",
+            "monthly": [],
+            "mar26_target": round(tgt),
+            "mar26_collected": round(received or 0),
+            "mar26_due": round(max(0, due)),
+            "collection_pct": collection_pct,
+            "cumulative": round(received or 0),
+            "w1": _rw(0),
+            "w2": _rw(1),
+            "w3": _rw(2),
+            "w4": _rw(3),
+            "w5": _rw(4),
+        })
+
+    return properties, total_target, total_collected, total_due
+
+
+def get_inflow_detail() -> dict:
+    rows_ta = get_sheet_values("TA Fee")
+    if rows_ta and len(rows_ta) > 2:
+        properties, total_target, total_collected, total_due = _from_ta_fee_sheet(rows_ta)
+        if properties:
+            return _finalize(properties, total_target, total_collected, total_due)
+
+    rows_in = get_sheet_values("Inflow")
+    if rows_in:
+        properties, total_target, total_collected, total_due = _from_inflow_sheet(rows_in)
+        return _finalize(properties, total_target, total_collected, total_due)
+
+    return {"properties": [], "summary": {}}
+
+
+def _finalize(properties, total_target, total_collected, total_due):
+    properties = [p for p in properties if p["mar26_target"] > 0 or p.get("cumulative", 0) > 0]
     properties.sort(key=lambda x: x["mar26_due"], reverse=True)
 
     insights = []

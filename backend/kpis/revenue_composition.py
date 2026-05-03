@@ -2,7 +2,7 @@ from __future__ import annotations
 
 """
 KPI: Revenue Composition — reads the Revenue sheet from the workbook at
-`excel_parser.EXCEL_PATH`. By default that file is **`Weekly update - 27.04.2024 v2.xlsx`**
+`excel_parser.EXCEL_PATH`. By default that file is **`Weekly update - 30.04.2024 v3.xlsx`**
 at the repository root (one level above `backend/`). Override only with
 `OLIVE_WEEKLY_EXCEL_PATH` or `EXCEL_PATH` if the workbook lives elsewhere.
 
@@ -122,19 +122,29 @@ def _read_revenue_sheet():
     # Do not rely on fixed rows alone: if EXCEL_PATH points at another workbook revision,
     # blind (23,3)/(23,5)/(23,7) reads pull unrelated cells. Anchor on the title row instead.
 
-    def franchised_bar(name: str, o: float, ot: float, tot: float) -> dict:
-        return {
+    def franchised_bar(
+        name: str, o: float, ot: float, tot: float, contrib: float | None
+    ) -> dict:
+        t = float(tot) if tot and tot > 0 else float(o) + float(ot)
+        if t <= 0:
+            t = max(float(o) + float(ot), 1e-9)
+        contrib_pct = None
+        if contrib is not None and contrib >= 0:
+            if contrib <= 1.0:
+                contrib_pct = round(contrib * 100, 2)
+            else:
+                contrib_pct = round(contrib, 2)
+        out = {
             "name": name,
-            "fr_open": round(o),
-            "fr_others": round(ot),
-            "total": round(tot),
-            "fr_open_pct": round(o / tot * 100) if tot else 0,
-            "fr_others_pct": round(ot / tot * 100) if tot else 0,
+            "fr_open": round(o, 2),
+            "fr_others": round(ot, 2),
+            "total": round(t, 2),
+            "fr_open_pct": round(o / t * 100) if t else 0,
+            "fr_others_pct": round(ot / t * 100) if t else 0,
         }
-
-    def _franchised_block_rows(title_row: int) -> tuple[int, int, int, int]:
-        """Return (header_row, open_row, others_row, total_row) relative to v2 spacing."""
-        return title_row + 2, title_row + 4, title_row + 5, title_row + 7
+        if contrib_pct is not None:
+            out["contribution_pct"] = contrib_pct
+        return out
 
     def _find_franchised_title_row(ws) -> int | None:
         for r in range(1, 85):
@@ -144,16 +154,39 @@ def _read_revenue_sheet():
                     return r
         return None
 
-    def _read_franchised_bars(ws) -> list[dict]:
-        """Read Feb / March / April (part) from fixed columns C,E,G (3,5,7) only.
+    def _scan_franchised_value_rows(ws, title_row: int) -> tuple[int, int | None, int | None, int | None]:
+        """Locate Open / Others / Total / % of contribution rows by col-B label (v3 has no Others/Total; row 26 is contribution only)."""
+        open_r: int | None = None
+        others_r: int | None = None
+        total_r: int | None = None
+        contrib_r: int | None = None
+        for r in range(title_row + 2, min(title_row + 16, 90)):
+            lab = str(ws.cell(r, 2).value or "").strip().lower()
+            if not lab:
+                continue
+            if "contribution" in lab:
+                contrib_r = r
+                continue
+            if open_r is None and "open" in lab and "other" not in lab:
+                open_r = r
+                continue
+            if others_r is None and "other" in lab:
+                others_r = r
+                continue
+            if total_r is None and "total" in lab and "contribution" not in lab:
+                total_r = r
+                continue
+        if open_r is None:
+            return None, None, None, None
+        return open_r, others_r, total_r, contrib_r
 
-        Do not scan the whole header row for labels — other layouts put "March 25"/"March 26"
-        in row 21, which produced wrong x-axis names and bogus stacks. v2 franchised block
-        always uses the same three value columns as the month headers above them.
-        """
+    def _read_franchised_bars(ws) -> list[dict]:
+        """Read Feb / March / April from columns C,E,G (3,5,7). Totals follow a dedicated Total row when present; else Open+Others (v3 workbook has only Open + % of contribution)."""
         title_row = _find_franchised_title_row(ws)
         if title_row is not None:
-            _, open_r, others_r, tot_r = _franchised_block_rows(title_row)
+            open_r, others_r, total_r, contrib_r = _scan_franchised_value_rows(ws, title_row)
+            if open_r is None:
+                return []
             open_label = str(ws.cell(open_r, 2).value or "").strip().lower()
             if "open" not in open_label:
                 return []
@@ -161,7 +194,9 @@ def _read_revenue_sheet():
             c21 = str(ws.cell(21, 3).value or "").strip().lower()
             if not c21.startswith("feb"):
                 return []
-            open_r, others_r, tot_r = 23, 24, 26
+            open_r, others_r, total_r, contrib_r = _scan_franchised_value_rows(ws, 19)
+            if open_r is None:
+                return []
             open_label = str(ws.cell(open_r, 2).value or "").strip().lower()
             if "open" not in open_label:
                 return []
@@ -170,17 +205,22 @@ def _read_revenue_sheet():
         month_triple: list[tuple[int, str]] = [
             (3, "Feb"),
             (5, "March"),
-            (7, "April (part)"),
+            (7, "April"),
         ]
 
         bars: list[dict] = []
         for col, name in month_triple:
             o = val(open_r, col)
-            ot = val(others_r, col)
-            tot = val(tot_r, col)
+            ot = val(others_r, col) if others_r else 0.0
+            sheet_tot = val(total_r, col) if total_r else 0.0
+            tot = sheet_tot if sheet_tot > 0 else o + ot
+            # Guard: never treat % of contribution decimals (e.g. 0.028) as rupee totals.
+            if tot < 200 and max(o, ot) > 2000:
+                tot = o + ot
+            contrib = float(val(contrib_r, col)) if contrib_r else None
             if tot <= 0 and o <= 0 and ot <= 0:
                 continue
-            bars.append(franchised_bar(name, o, ot, tot))
+            bars.append(franchised_bar(name, o, ot, tot, contrib))
 
         return bars
 

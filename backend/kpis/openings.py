@@ -1,16 +1,15 @@
 """
 KPI 2: Openings — Inventory Creation (Keys Added)
 
-Operational sheet (Weekly update - 27.04.2024 v2.xlsx, 0-indexed rows/cols):
-  Monthly: header ~row 3; Olive Total Keys row 5 (idx 4), cumulative keys/props rows 7–8 (idx 6–7);
-  Open Total Keys row 10 (idx 9), cumulative keys/props rows 12–13 (idx 11–12).
+Operational sheet (Weekly update - 30.04.2024 v3.xlsx, 0-indexed rows/cols):
+  Monthly: header row 3; Olive cumulative keys row 7 (idx 6), props row 8 (idx 7);
+  Open cumulative keys row 12 (idx 11), props row 13 (idx 12);
+  Overall cumulative keys row 17 (idx 16), props row 18 (idx 17).
 
-  Weekly (April): Open Props/Keys rows 21–22 (idx 20–21), Olive rows 24–25 (idx 23–24);
-    col B = label, C = March'26, D–G = W1–W4, H = Total
+  Weekly: Open props/keys rows 23–24 (idx 22–23), Olive 26–27 (idx 25–26), totals 30–31 (idx 29–30);
+    col B = label, C = March'26, D–H = W1–W5, I = Total
 
-  Same row may carry \"Portfolio Update:\" (col B) and \"April '26 WIP\" (col H).
   WIP property rows: name col H (7), Handover col I (8), Go-live col J (9).
-
   Portfolio narrative: text in col B on rows below the WIP header until property rows (H set, B blank).
 """
 import re
@@ -199,12 +198,16 @@ def get_openings() -> dict:
         open_cumulative = safe_int(rows[11][col_idx]) if len(rows) > 11 and len(rows[11]) > col_idx else 0
         olive_cum_props = safe_int(rows[7][col_idx]) if len(rows) > 7 and len(rows[7]) > col_idx else 0
         open_cum_props = safe_int(rows[12][col_idx]) if len(rows) > 12 and len(rows[12]) > col_idx else 0
+        overall_keys = safe_int(rows[16][col_idx]) if len(rows) > 16 and len(rows[16]) > col_idx else 0
+        overall_props = safe_int(rows[17][col_idx]) if len(rows) > 17 and len(rows[17]) > col_idx else 0
         trend_data.append({
             "month": month_label,
             "Olive": olive_cumulative or 0,
             "Open":  open_cumulative or 0,
             "Olive_cum_props": olive_cum_props or 0,
             "Open_cum_props":  open_cum_props or 0,
+            "Overall": overall_keys or 0,
+            "Overall_cum_props": overall_props or 0,
         })
 
     # April'26 WIP + Operational Portfolio (v1: header col H; properties H–J; bullets col B below header)
@@ -251,16 +254,16 @@ def get_openings() -> dict:
 
     def get_row(row_idx):
         if len(rows) <= row_idx:
-            return 0, [0, 0, 0, 0]
+            return 0, [0, 0, 0, 0, 0]
         r = rows[row_idx]
         march26 = safe_int(r[2]) or 0 if len(r) > 2 else 0
-        weekly = [safe_int(r[c]) or 0 for c in range(3, 7)]
+        weekly = [safe_int(r[c]) or 0 for c in range(3, 8)]
         return march26, weekly
 
-    open_props_mar26, open_props_w = get_row(20)
-    open_keys_mar26, open_keys_w = get_row(21)
-    olive_props_mar26, olive_props_w = get_row(23)
-    olive_keys_mar26, olive_keys_w = get_row(24)
+    open_props_mar26, open_props_w = get_row(22)
+    open_keys_mar26, open_keys_w = get_row(23)
+    olive_props_mar26, olive_props_w = get_row(25)
+    olive_keys_mar26, olive_keys_w = get_row(26)
 
     olive_keys_apr = mcell(4, APR_COL)
     olive_props_apr = mcell(5, APR_COL)
@@ -272,7 +275,7 @@ def get_openings() -> dict:
             "label":   label,
             "march26": mar26,
             "apr26":   apr26,
-            "w1":      w[0], "w2": w[1], "w3": w[2], "w4": w[3],
+            "w1":      w[0], "w2": w[1], "w3": w[2], "w4": w[3], "w5": w[4] if len(w) > 4 else 0,
             "total":   sum(w),
         }
 
@@ -289,8 +292,8 @@ def get_openings() -> dict:
         },
     ]
 
-    total_props_w = [open_props_w[i] + olive_props_w[i] for i in range(4)]
-    total_keys_w = [open_keys_w[i] + olive_keys_w[i] for i in range(4)]
+    total_props_w = [open_props_w[i] + olive_props_w[i] for i in range(5)]
+    total_keys_w = [open_keys_w[i] + olive_keys_w[i] for i in range(5)]
     total_props_mar = open_props_mar26 + olive_props_mar26
     total_keys_mar = open_keys_mar26 + olive_keys_mar26
     total_props_apr = open_props_apr + olive_props_apr

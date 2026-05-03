@@ -36,6 +36,7 @@ function stripLeadingEnumeration(s: string): string {
 const COLORS = {
   Olive: "#1A1A1A",
   Open:  "#E4572E",
+  Overall: "#0d9488",
 } as const;
 
 const makeDot = (brand: "Olive" | "Open") => (props: any) => {
@@ -66,8 +67,36 @@ const CustomTooltip = ({ active, payload, activeBrand }: any) => {
   const p = payload.find((item: any) => item.name === activeBrand);
   if (!p) return null;
   const brand = p.name;
-  const cumProps = p.payload[`${brand}_cum_props`] || 0;
   const color = COLORS[brand as keyof typeof COLORS] || p.color;
+
+  if (brand === "Overall") {
+    const row = p.payload;
+    const keysVal = row?.Overall ?? p.value;
+    const propsVal = row?.Overall_cum_props ?? 0;
+    return (
+      <div style={{
+        background: "#fff",
+        border: `1px solid ${color}`,
+        borderRadius: "12px",
+        padding: "16px",
+        fontSize: "14px",
+        boxShadow: "0 10px 25px rgba(0,0,0,0.1)",
+        minWidth: "200px",
+      }}>
+        <div style={{ fontWeight: 800, color, marginBottom: "8px", textTransform: "uppercase", fontSize: "12px" }}>Overall</div>
+        <div style={{ display: "flex", justifyContent: "space-between", gap: "16px" }}>
+          <span style={{ color: "#6B6B6B" }}>Cumulative Keys</span>
+          <span style={{ fontWeight: 700, color: "#1A1A1A" }}>{keysVal}</span>
+        </div>
+        <div style={{ display: "flex", justifyContent: "space-between", gap: "16px", marginTop: "4px" }}>
+          <span style={{ color: "#6B6B6B" }}>Cumulative Properties</span>
+          <span style={{ fontWeight: 700, color: "#1A1A1A" }}>{propsVal}</span>
+        </div>
+      </div>
+    );
+  }
+
+  const cumProps = p.payload[`${brand}_cum_props`] || 0;
   return (
     <div style={{
       background: "#fff", border: "1px solid #E5E7EB", borderRadius: "12px",
@@ -83,6 +112,26 @@ const CustomTooltip = ({ active, payload, activeBrand }: any) => {
         <span style={{ fontWeight: 700, color: "#1A1A1A" }}>{cumProps}</span>
       </div>
     </div>
+  );
+};
+
+const makeOverallKeyDot = (props: any) => {
+  const { cx, cy, value, payload } = props;
+  if (cx == null || cy == null || value == null) return null;
+  const isRecent = payload.isRecent;
+  const c = COLORS.Overall;
+  const r = isRecent ? 5 : 3;
+  const strokeW = isRecent ? 2 : 1;
+  const textY = cy - 18;
+  return (
+    <g style={{ pointerEvents: "none" }}>
+      <circle cx={cx} cy={cy} r={r} fill={c} stroke="#fff" strokeWidth={strokeW} />
+      {isRecent && (
+        <text x={cx} y={textY} textAnchor="middle" fontSize={11} fontWeight={800} fill={c}>
+          {value}
+        </text>
+      )}
+    </g>
   );
 };
 
@@ -121,8 +170,10 @@ export default function OpeningsPage() {
       isRecent,
       Olive: m.Olive,
       Open:  m.Open,
+      Overall: m.Overall ?? 0,
       Olive_cum_props: m.Olive_cum_props,
       Open_cum_props:  m.Open_cum_props,
+      Overall_cum_props: m.Overall_cum_props ?? 0,
     };
   });
 
@@ -143,8 +194,8 @@ export default function OpeningsPage() {
               <span style={{ display: "block", height: "3px", width: "36px", background: "#E4572E", borderRadius: "2px", marginTop: "5px" }} />
             </h3>
 
-            {/* Chart — flex:1 fills remaining card height naturally */}
-            <div style={{ flex: 1, minHeight: "180px", width: "100%" }}>
+            {/* Key count: Olive, Open, then Overall (drawn on top of Open) */}
+            <div style={{ flex: 1, minHeight: "220px", width: "100%" }}>
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={allData} margin={{ top: 24, right: 20, left: -10, bottom: 16 }}
                   onMouseLeave={() => setActiveBrand(null)}>
@@ -172,6 +223,20 @@ export default function OpeningsPage() {
                       onMouseEnter={() => setActiveBrand(brand)} onMouseMove={() => setActiveBrand(brand)} connectNulls
                     />
                   ))}
+                  <Line
+                    key="cap-Overall"
+                    type="monotone"
+                    dataKey="Overall"
+                    name="Overall"
+                    stroke="transparent"
+                    strokeWidth={30}
+                    dot={false}
+                    activeDot={false}
+                    legendType="none"
+                    onMouseEnter={() => setActiveBrand("Overall")}
+                    onMouseMove={() => setActiveBrand("Overall")}
+                    connectNulls
+                  />
                   <Line type="monotone" dataKey="Olive" name="Olive" stroke={COLORS.Olive} strokeWidth={2.5}
                     dot={makeDot("Olive")} activeDot={{ r: 7, strokeWidth: 2, stroke: "#fff", fill: COLORS.Olive }}
                     onMouseEnter={() => setActiveBrand("Olive")} onMouseMove={() => setActiveBrand("Olive")}
@@ -182,13 +247,19 @@ export default function OpeningsPage() {
                     onMouseEnter={() => setActiveBrand("Open")} onMouseMove={() => setActiveBrand("Open")}
                     connectNulls style={{ pointerEvents: "none" }}
                   />
+                  <Line type="monotone" dataKey="Overall" name="Overall" stroke={COLORS.Overall} strokeWidth={2.5}
+                    dot={makeOverallKeyDot}
+                    activeDot={{ r: 7, strokeWidth: 2, stroke: "#fff", fill: COLORS.Overall }}
+                    onMouseEnter={() => setActiveBrand("Overall")} onMouseMove={() => setActiveBrand("Overall")}
+                    connectNulls style={{ pointerEvents: "none" }}
+                  />
                 </LineChart>
               </ResponsiveContainer>
             </div>
 
             {/* Round pill legend */}
             <div style={{ display: "flex", justifyContent: "center", gap: "12px", marginTop: "12px", flexWrap: "wrap" }}>
-              {([{ label: "Olive", color: "#1A1A1A" }, { label: "Open", color: "#E4572E" }]).map(({ label, color }) => (
+              {([{ label: "Olive", color: "#1A1A1A" }, { label: "Open", color: "#E4572E" }, { label: "Overall keys", color: COLORS.Overall }]).map(({ label, color }) => (
                 <span key={label} style={{
                   display: "flex", alignItems: "center", gap: "6px",
                   background: "#F3F4F6", borderRadius: "999px",
@@ -204,16 +275,30 @@ export default function OpeningsPage() {
             <div style={{ display: "flex", justifyContent: "center", gap: "16px", marginTop: "20px" }}>
               <div style={{ background: "#fff", border: "1px solid #E5E7EB", borderRadius: "8px", padding: "12px 16px", minWidth: "140px", flex: "1", maxWidth: "200px", textAlign: "left", boxShadow: "0 1px 2px rgba(0,0,0,0.02)" }}>
                 <div style={{ fontSize: "11px", fontWeight: 700, color: "#9CA3AF", textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: "8px" }}>Total Properties</div>
-                <div style={{ fontWeight: 800, color: "#1A1A1A", fontSize: "24px", lineHeight: 1 }}>
-                  {data?.trend_data && data.trend_data.length > 0 
-                    ? (data.trend_data[data.trend_data.length - 1].Olive_cum_props + data.trend_data[data.trend_data.length - 1].Open_cum_props).toLocaleString('en-IN') 
-                    : 0}
+                <div style={{ fontWeight: 800, color: "#059669", fontSize: "24px", lineHeight: 1 }}>
+                  {(() => {
+                    const t = data?.trend_data;
+                    if (!t?.length) return "0";
+                    const last = t[t.length - 1] as { Olive_cum_props?: number; Open_cum_props?: number; Overall_cum_props?: number };
+                    const v = last.Overall_cum_props != null && last.Overall_cum_props > 0
+                      ? last.Overall_cum_props
+                      : (last.Olive_cum_props ?? 0) + (last.Open_cum_props ?? 0);
+                    return Number(v).toLocaleString("en-IN");
+                  })()}
                 </div>
               </div>
               <div style={{ background: "#fff", border: "1px solid #E5E7EB", borderRadius: "8px", padding: "12px 16px", minWidth: "140px", flex: "1", maxWidth: "200px", textAlign: "left", boxShadow: "0 1px 2px rgba(0,0,0,0.02)" }}>
                 <div style={{ fontSize: "11px", fontWeight: 700, color: "#9CA3AF", textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: "8px" }}>Total Keys</div>
-                <div style={{ fontWeight: 800, color: "#E4572E", fontSize: "24px", lineHeight: 1 }}>
-                  {((data?.olive_total_keys ?? 0) + (data?.open_total_keys ?? 0)).toLocaleString("en-IN")}
+                <div style={{ fontWeight: 800, color: "#059669", fontSize: "24px", lineHeight: 1 }}>
+                  {(() => {
+                    const t = data?.trend_data;
+                    if (!t?.length) return "0";
+                    const last = t[t.length - 1] as { Olive?: number; Open?: number; Overall?: number };
+                    const v = last.Overall != null && last.Overall > 0
+                      ? last.Overall
+                      : (data?.olive_total_keys ?? 0) + (data?.open_total_keys ?? 0);
+                    return Number(v).toLocaleString("en-IN");
+                  })()}
                 </div>
               </div>
             </div>
@@ -248,6 +333,7 @@ export default function OpeningsPage() {
                     <th style={{ padding: "10px 14px", textAlign: "center", fontSize: "11px", fontWeight: 700, color: "#9CA3AF", textTransform: "uppercase", letterSpacing: "0.5px" }}>W2</th>
                     <th style={{ padding: "10px 14px", textAlign: "center", fontSize: "11px", fontWeight: 700, color: "#9CA3AF", textTransform: "uppercase", letterSpacing: "0.5px" }}>W3</th>
                     <th style={{ padding: "10px 14px", textAlign: "center", fontSize: "11px", fontWeight: 700, color: "#9CA3AF", textTransform: "uppercase", letterSpacing: "0.5px" }}>W4</th>
+                    <th style={{ padding: "10px 14px", textAlign: "center", fontSize: "11px", fontWeight: 700, color: "#9CA3AF", textTransform: "uppercase", letterSpacing: "0.5px" }}>W5</th>
                     <th style={{ padding: "10px 14px", textAlign: "center", fontSize: "11px", fontWeight: 700, color: "#E4572E", textTransform: "uppercase", letterSpacing: "0.5px", background: "#FFF4F1" }}>April &apos;26</th>
                   </tr>
                 </thead>
@@ -262,6 +348,7 @@ export default function OpeningsPage() {
                         <td style={{ padding: "10px 14px", textAlign: "center", color: "#9CA3AF", fontWeight: 500 }}>{brand.props.w2}</td>
                         <td style={{ padding: "10px 14px", textAlign: "center", color: "#9CA3AF", fontWeight: 500 }}>{brand.props.w3}</td>
                         <td style={{ padding: "10px 14px", textAlign: "center", color: "#9CA3AF", fontWeight: 500 }}>{brand.props.w4}</td>
+                        <td style={{ padding: "10px 14px", textAlign: "center", color: "#9CA3AF", fontWeight: 500 }}>{brand.props.w5 ?? "—"}</td>
                         <td style={{ padding: "10px 14px", textAlign: "center", fontWeight: 700, color: "#E4572E", background: "#FFFBF0", fontSize: "14px" }}>{brand.props.total}</td>
                       </tr>
                       {/* Keys row */}
@@ -272,6 +359,7 @@ export default function OpeningsPage() {
                         <td style={{ padding: "10px 14px", textAlign: "center", color: "#9CA3AF", fontWeight: 500 }}>{brand.keys.w2}</td>
                         <td style={{ padding: "10px 14px", textAlign: "center", color: "#9CA3AF", fontWeight: 500 }}>{brand.keys.w3}</td>
                         <td style={{ padding: "10px 14px", textAlign: "center", color: "#9CA3AF", fontWeight: 500 }}>{brand.keys.w4}</td>
+                        <td style={{ padding: "10px 14px", textAlign: "center", color: "#9CA3AF", fontWeight: 500 }}>{brand.keys.w5 ?? "—"}</td>
                         <td style={{ padding: "10px 14px", textAlign: "center", fontWeight: 700, color: "#E4572E", background: "#FFFBF0", fontSize: "14px" }}>{brand.keys.total}</td>
                       </tr>
                     </React.Fragment>
@@ -285,6 +373,7 @@ export default function OpeningsPage() {
                     <td style={{ padding: "12px 14px", textAlign: "center", fontWeight: 700, color: "#1A1A1A" }}>{data?.brands_totals?.props?.w2}</td>
                     <td style={{ padding: "12px 14px", textAlign: "center", fontWeight: 700, color: "#1A1A1A" }}>{data?.brands_totals?.props?.w3}</td>
                     <td style={{ padding: "12px 14px", textAlign: "center", fontWeight: 700, color: "#1A1A1A" }}>{data?.brands_totals?.props?.w4}</td>
+                    <td style={{ padding: "12px 14px", textAlign: "center", fontWeight: 700, color: "#1A1A1A" }}>{data?.brands_totals?.props?.w5 ?? "—"}</td>
                     <td style={{ padding: "12px 14px", textAlign: "center", fontWeight: 800, color: "#E4572E", fontSize: "15px", background: "#FFF4F1" }}>{data?.brands_totals?.props?.total}</td>
                   </tr>
                   {/* TOTAL — Keys */}
@@ -295,6 +384,7 @@ export default function OpeningsPage() {
                     <td style={{ padding: "12px 14px", textAlign: "center", fontWeight: 700, color: "#1A1A1A" }}>{data?.brands_totals?.keys?.w2}</td>
                     <td style={{ padding: "12px 14px", textAlign: "center", fontWeight: 700, color: "#1A1A1A" }}>{data?.brands_totals?.keys?.w3}</td>
                     <td style={{ padding: "12px 14px", textAlign: "center", fontWeight: 700, color: "#1A1A1A" }}>{data?.brands_totals?.keys?.w4}</td>
+                    <td style={{ padding: "12px 14px", textAlign: "center", fontWeight: 700, color: "#1A1A1A" }}>{data?.brands_totals?.keys?.w5 ?? "—"}</td>
                     <td style={{ padding: "12px 14px", textAlign: "center", fontWeight: 800, color: "#E4572E", fontSize: "15px", background: "#FFF4F1" }}>{data?.brands_totals?.keys?.total}</td>
                   </tr>
                 </tbody>

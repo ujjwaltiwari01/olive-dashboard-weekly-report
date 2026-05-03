@@ -35,6 +35,7 @@ def get_collections() -> dict:
         return {"error": "Inflow sheet not found or empty"}
 
     def parse_property_row(r_idx):
+        """Inflow sheet: B name, C target, E–I = W1–W5, J = Total received, K = To be collected (0-based indices)."""
         if r_idx >= len(rows):
             return None
         row = rows[r_idx]
@@ -43,13 +44,17 @@ def get_collections() -> dict:
             return None
 
         target = safe_int(row[2])
-        w1 = safe_int(row[4])
-        w2 = safe_int(row[5])
-        w3 = safe_int(row[6])
-        w4 = safe_int(row[7])
-        received = (w1 or 0) + (w2 or 0) + (w3 or 0) + (w4 or 0)
-        expected = safe_int(row[8])
-        total = received + (expected or 0)
+        w1 = safe_int(row[4]) if len(row) > 4 else 0
+        w2 = safe_int(row[5]) if len(row) > 5 else 0
+        w3 = safe_int(row[6]) if len(row) > 6 else 0
+        w4 = safe_int(row[7]) if len(row) > 7 else 0
+        w5 = safe_int(row[8]) if len(row) > 8 else 0
+        weekly_sum = (w1 or 0) + (w2 or 0) + (w3 or 0) + (w4 or 0) + (w5 or 0)
+        j_total = safe_int(row[9]) if len(row) > 9 else None
+        received_total = j_total if j_total is not None else weekly_sum
+        if (received_total or 0) == 0 and weekly_sum:
+            received_total = weekly_sum
+        to_be_collected = safe_int(row[10]) if len(row) > 10 else 0
 
         return {
             "name": name,
@@ -58,9 +63,10 @@ def get_collections() -> dict:
             "w2": w2,
             "w3": w3,
             "w4": w4,
-            "received": received,
-            "expected": expected,
-            "total": total,
+            "w5": w5,
+            "received_total": received_total,
+            "to_be_collected": to_be_collected,
+            "total": received_total,
         }
 
     # ── TA Fees: scan by section headers (col B) — positions move between workbook versions ──
@@ -128,14 +134,15 @@ def get_collections() -> dict:
     def get_subtotal(props, name):
         return {
             "name": name,
-            "target": sum(p["target"] for p in props if p["target"]),
-            "w1": sum(p["w1"] for p in props if p["w1"]),
-            "w2": sum(p["w2"] for p in props if p["w2"]),
-            "w3": sum(p["w3"] for p in props if p["w3"]),
-            "w4": sum(p["w4"] for p in props if p["w4"]),
-            "received": sum(p["received"] for p in props if p["received"]),
-            "expected": sum(p["expected"] for p in props if p["expected"]),
-            "total": sum(p["total"] for p in props if p["total"]),
+            "target": sum((p["target"] or 0) for p in props),
+            "w1": sum((p["w1"] or 0) for p in props),
+            "w2": sum((p["w2"] or 0) for p in props),
+            "w3": sum((p["w3"] or 0) for p in props),
+            "w4": sum((p["w4"] or 0) for p in props),
+            "w5": sum((p["w5"] or 0) for p in props),
+            "received_total": sum((p["received_total"] or 0) for p in props),
+            "to_be_collected": sum((p["to_be_collected"] or 0) for p in props),
+            "total": sum((p["total"] or 0) for p in props),
         }
 
     subtotal_spark = get_subtotal(spark_props, "Subtotal Spark")
@@ -149,8 +156,9 @@ def get_collections() -> dict:
                 "w2": None,
                 "w3": None,
                 "w4": None,
-                "received": 0,
-                "expected": None,
+                "w5": None,
+                "received_total": 0,
+                "to_be_collected": None,
                 "total": 0,
             }
         return r
@@ -172,8 +180,9 @@ def get_collections() -> dict:
                 "w2": tf["w2"],
                 "w3": tf["w3"],
                 "w4": tf["w4"],
-                "received": tf["received"],
-                "expected": tf["expected"],
+                "w5": tf["w5"],
+                "received_total": tf["received_total"],
+                "to_be_collected": tf["to_be_collected"],
                 "total": ta_fees_total,
                 "subsections": [
                     {
@@ -193,8 +202,9 @@ def get_collections() -> dict:
                         "w2": os_["w2"],
                         "w3": os_["w3"],
                         "w4": os_["w4"],
-                        "received": os_["received"],
-                        "expected": os_["expected"],
+                        "w5": os_["w5"],
+                        "received_total": os_["received_total"],
+                        "to_be_collected": os_["to_be_collected"],
                         "total": os_["total"],
                     },
                 ],
@@ -206,8 +216,9 @@ def get_collections() -> dict:
                 "w2": mf["w2"],
                 "w3": mf["w3"],
                 "w4": mf["w4"],
-                "received": mf["received"],
-                "expected": mf["expected"],
+                "w5": mf["w5"],
+                "received_total": mf["received_total"],
+                "to_be_collected": mf["to_be_collected"],
                 "total": mgmt_total,
             },
             {
@@ -217,8 +228,9 @@ def get_collections() -> dict:
                 "w2": pi["w2"],
                 "w3": pi["w3"],
                 "w4": pi["w4"],
-                "received": pi["received"],
-                "expected": pi["expected"],
+                "w5": pi["w5"],
+                "received_total": pi["received_total"],
+                "to_be_collected": pi["to_be_collected"],
                 "total": profit_total,
             },
         ],
@@ -229,8 +241,9 @@ def get_collections() -> dict:
             "w2": tif["w2"],
             "w3": tif["w3"],
             "w4": tif["w4"],
-            "received": tif["received"],
-            "expected": tif["expected"],
+            "w5": tif["w5"],
+            "received_total": tif["received_total"],
+            "to_be_collected": tif["to_be_collected"],
             "total": total_inflow,
         },
     }

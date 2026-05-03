@@ -122,17 +122,14 @@ export default function CollectionsPage() {
             <tr style={{ background: "#0f172a" }}>
               <th style={{ ...thStyle, color: "white" }} rowSpan={2}>Description</th>
               <th style={{ ...thStyle, textAlign: "right", color: "#94a3b8" }} rowSpan={2}>Target</th>
-              {/* Received spans the 4 week sub-columns */}
-              <th style={{ ...thStyle, textAlign: "center", color: "#10b981", borderBottom: "1px solid rgba(255,255,255,0.15)", paddingBottom: "2px" }} colSpan={4}>
+              <th style={{ ...thStyle, textAlign: "center", color: "#10b981", borderBottom: "1px solid rgba(255,255,255,0.15)", paddingBottom: "2px" }} colSpan={6}>
                 Received
               </th>
-              <th style={{ ...thStyle, textAlign: "right", color: "#f59e0b" }} rowSpan={2}>Expected</th>
-              <th style={{ ...thStyle, textAlign: "right", color: "white" }} rowSpan={2}>Total Inflow</th>
+              <th style={{ ...thStyle, textAlign: "right", color: "#f59e0b" }} rowSpan={2}>To be collected</th>
             </tr>
-            {/* Row 2: week sub-headers */}
             <tr style={{ background: "#162032" }}>
-              {["W1", "W2", "W3", "W4"].map((w) => (
-                <th key={w} style={{ ...thStyle, textAlign: "right", color: "#6ee7b7", paddingTop: "2px" }}>{w}</th>
+              {["W1", "W2", "W3", "W4", "W5", "Total"].map((w) => (
+                <th key={w} style={{ ...thStyle, textAlign: "right", color: w === "Total" ? "#a7f3d0" : "#6ee7b7", paddingTop: "2px" }}>{w}</th>
               ))}
             </tr>
           </thead>
@@ -141,7 +138,7 @@ export default function CollectionsPage() {
               <React.Fragment key={sIdx}>
                 {sIdx > 0 && (
                   <tr>
-                    <td colSpan={8} style={{ height: "12px", background: "#f8fafc", border: "none" }} />
+                    <td colSpan={9} style={{ height: "12px", background: "#f8fafc", border: "none" }} />
                   </tr>
                 )}
 
@@ -153,8 +150,9 @@ export default function CollectionsPage() {
                   <ValueTd value={section.w2} bold type="week" />
                   <ValueTd value={section.w3} bold type="week" />
                   <ValueTd value={section.w4} bold type="week" />
-                  <ValueTd value={section.expected} bold />
-                  <ValueTd value={section.total} bold />
+                  <ValueTd value={section.w5} bold type="week" />
+                  <ValueTd value={section.received_total ?? section.received} bold type="received" />
+                  <ValueTd value={section.to_be_collected ?? section.expected} bold />
                 </tr>
 
                 {/* Subsections (Spark, Olive, Open set-up fees) */}
@@ -164,7 +162,7 @@ export default function CollectionsPage() {
                     {sub.properties && (
                       <tr style={{ background: "white" }}>
                         <DescriptionTd name={sub.name} level={2} />
-                        {[...Array(7)].map((_, i) => <ValueTd key={i} value={null} />)}
+                        {[...Array(8)].map((_, i) => <ValueTd key={i} value={null} />)}
                       </tr>
                     )}
 
@@ -177,8 +175,9 @@ export default function CollectionsPage() {
                         <ValueTd value={prop.w2} type="week" />
                         <ValueTd value={prop.w3} type="week" />
                         <ValueTd value={prop.w4} type="week" />
-                        <ValueTd value={prop.expected} />
-                        <ValueTd value={prop.total} />
+                        <ValueTd value={prop.w5} type="week" />
+                        <ValueTd value={prop.received_total ?? prop.received} type="received" />
+                        <ValueTd value={prop.to_be_collected ?? prop.expected} />
                       </tr>
                     ))}
 
@@ -191,8 +190,9 @@ export default function CollectionsPage() {
                         <ValueTd value={sub.w2} type="week" />
                         <ValueTd value={sub.w3} type="week" />
                         <ValueTd value={sub.w4} type="week" />
-                        <ValueTd value={sub.expected} />
-                        <ValueTd value={sub.total} />
+                        <ValueTd value={sub.w5} type="week" />
+                        <ValueTd value={sub.received_total ?? sub.received} type="received" />
+                        <ValueTd value={sub.to_be_collected ?? sub.expected} />
                       </tr>
                     )}
                   </React.Fragment>
@@ -210,17 +210,9 @@ export default function CollectionsPage() {
               <ValueTd value={data.total_inflow.w2} bold />
               <ValueTd value={data.total_inflow.w3} bold />
               <ValueTd value={data.total_inflow.w4} bold />
-              <ValueTd value={data.total_inflow.expected} bold />
-              <td style={{
-                padding: "6px 12px",
-                textAlign: "right",
-                fontWeight: 900,
-                color: "#ff8c00",
-                fontSize: "15px",
-                fontFamily: "var(--font-geist-mono), monospace",
-              }}>
-                {formatCurrency(data.total_inflow.total)}
-              </td>
+              <ValueTd value={data.total_inflow.w5} bold />
+              <ValueTd value={data.total_inflow.received_total ?? data.total_inflow.received} bold type="received" />
+              <ValueTd value={data.total_inflow.to_be_collected ?? data.total_inflow.expected} bold />
             </tr>
           </tbody>
         </table>

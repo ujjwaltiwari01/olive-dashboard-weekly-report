@@ -28,11 +28,11 @@ export default function InflowDetailPage() {
     <div style={{ padding: "32px", maxWidth: "1400px" }}>
       <div style={{ marginBottom: "28px" }}>
         <h1 style={{ fontSize: "24px", fontWeight: 800, color: "#0f172a", margin: 0 }}>🔶 Inflow Detail — Collection Engine</h1>
-        <p style={{ color: "#64748b", marginTop: "4px", fontSize: "14px" }}>TA Fee collection per property for Mar'26</p>
+        <p style={{ color: "#64748b", marginTop: "4px", fontSize: "14px" }}>TA Fee collection per property — April 2026 (from Inflow breakdown when TA Fee sheet is absent)</p>
       </div>
 
       <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: "16px", marginBottom: "20px" }}>
-        <KPICard title="Mar'26 Collectable" value={formatCurrency(summary?.total_target ?? 0, true)} color="blue" icon="📋" size="lg" />
+        <KPICard title="Apr'26 Collectable" value={formatCurrency(summary?.total_target ?? 0, true)} color="blue" icon="📋" size="lg" />
         <KPICard title="Collected" value={formatCurrency(summary?.total_collected ?? 0, true)} color="green" icon="✅" size="lg" />
         <KPICard title="Outstanding" value={formatCurrency(summary?.total_due ?? 0, true)} color={(summary?.total_due ?? 0) > 1000000 ? "red" : "amber"} icon="⏳" size="lg" />
         <KPICard title="Collection %" value={formatPct(summary?.collection_pct ?? 0)} color={(summary?.collection_pct ?? 0) >= 80 ? "green" : (summary?.collection_pct ?? 0) >= 60 ? "amber" : "red"} icon="💯" size="lg" />
@@ -84,7 +84,12 @@ export default function InflowDetailPage() {
               <th style={thS}>Property</th>
               <th style={thS}>City</th>
               <th style={thS}>BD</th>
-              <th style={thS}>Mar'26 Target</th>
+              <th style={thS}>Apr&apos;26 Target</th>
+              <th style={thS}>W1</th>
+              <th style={thS}>W2</th>
+              <th style={thS}>W3</th>
+              <th style={thS}>W4</th>
+              <th style={thS}>W5</th>
               <th style={thS}>Collected</th>
               <th style={thS}>Due</th>
               <th style={thS}>Collection %</th>
@@ -98,6 +103,11 @@ export default function InflowDetailPage() {
                 <td style={tdS}>{p.city || "—"}</td>
                 <td style={tdS}>{p.bd || "—"}</td>
                 <td style={tdS}>{formatCurrency(p.mar26_target, true)}</td>
+                <td style={tdS}>{formatCurrency(p.w1 ?? 0, true)}</td>
+                <td style={tdS}>{formatCurrency(p.w2 ?? 0, true)}</td>
+                <td style={tdS}>{formatCurrency(p.w3 ?? 0, true)}</td>
+                <td style={tdS}>{formatCurrency(p.w4 ?? 0, true)}</td>
+                <td style={tdS}>{formatCurrency(p.w5 ?? 0, true)}</td>
                 <td style={tdS}><span style={{ color: "#16a34a", fontWeight: 600 }}>{formatCurrency(p.mar26_collected, true)}</span></td>
                 <td style={tdS}><span style={{ color: p.mar26_due > 0 ? "#dc2626" : "#64748b", fontWeight: p.mar26_due > 0 ? 700 : 400 }}>{formatCurrency(p.mar26_due, true)}</span></td>
                 <td style={tdS}><span style={{ color: pctColor(p.collection_pct), fontWeight: 700 }}>{p.collection_pct}%</span></td>

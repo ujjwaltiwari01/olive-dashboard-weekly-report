@@ -1,15 +1,15 @@
 """
 KPI 1: Signings — Deal closures vs targets per Brand with Weekly breakdown
 
-Signings sheet (Weekly update - 27.04.2024 v2.xlsx layout, 0-indexed rows/cols):
-  Row 2  = Olive Total Keys     | Cols: B = brought forward, C..O = Apr'25..Apr'26
+Signings sheet (Weekly update - 30.04.2024 v3.xlsx layout, 0-indexed rows/cols):
+  Row 2  = Olive Total Keys     | Cols: A label, B = BF, C.. = Apr'25..Apr'26, then Total
   Row 7  = Spark Total Keys
   Row 12 = Open   Total Keys
-  Cumulative properties / keys on the rows below each brand block.
-  Weekly (April execution): rows 23–25 = Open, Olive, Spark
-    col A = name, B = Mar'26, C–F = W1–W4, G = Total
-  Portfolio Update: label in col A or B; bullets follow in that column (or A/B fallback). Single blank rows
-  are skipped; block ends after two consecutive blank rows.
+  Rows 4–5, 9–10, 14–15 = cumulative properties / keys per brand.
+  Rows 19–20 = Overall cumulative properties / keys (monthly trend).
+  Weekly: rows 28–30 (1-based) → indices 27–29 = Open, Olive, Spark — B = Mar'26, C–G = W1–W5, H = Total
+  Portfolio Update: label in col A or B; bullets follow. Single blank rows skipped;
+  block ends after two consecutive blank rows.
 """
 import re
 
@@ -127,7 +127,16 @@ def get_signings() -> dict:
     OLIVE_CUM_P, OLIVE_CUM_K = 4, 5
     SPARK_CUM_P, SPARK_CUM_K = 9, 10
     OPEN_CUM_P, OPEN_CUM_K = 14, 15
-    APR_MONTH_COL = 14  # Apr-26 on same axis as monthly grid (0-indexed)
+    OVERALL_CUM_P, OVERALL_CUM_K = 19, 20
+
+    def _apr_month_col() -> int:
+        r0 = rows[0] if rows else []
+        for i, c in enumerate(r0):
+            if isinstance(c, str) and c.strip().lower() == "total":
+                return max(2, i - 1)
+        return 14
+
+    APR_MONTH_COL = _apr_month_col()
 
     monthly_totals = []
     for i, month_label in enumerate(months):
@@ -149,13 +158,15 @@ def get_signings() -> dict:
             "Olive_cum_keys": (safe_int(cell(OLIVE_CUM_K)) or 0),
             "Spark_cum_keys": (safe_int(cell(SPARK_CUM_K)) or 0),
             "Open_cum_keys":  (safe_int(cell(OPEN_CUM_K)) or 0),
+            "overall_cum_props": (safe_int(cell(OVERALL_CUM_P)) or 0),
+            "overall_cum_keys": (safe_int(cell(OVERALL_CUM_K)) or 0),
         })
 
     def get_brand_weekly(row_idx, name, monthly_keys_row):
         if len(rows) <= row_idx:
             return {
                 "name": name, "prev_month": 0, "apr26": 0,
-                "w1": 0, "w2": 0, "w3": 0, "w4": 0, "total": 0,
+                "w1": 0, "w2": 0, "w3": 0, "w4": 0, "w5": 0, "total": 0,
             }
         r = rows[row_idx]
         apr26 = 0
@@ -166,17 +177,18 @@ def get_signings() -> dict:
         w2 = safe_int(r[3]) or 0
         w3 = safe_int(r[4]) or 0
         w4 = safe_int(r[5]) or 0
-        t_cell = safe_int(r[6]) if len(r) > 6 else None
-        total = t_cell if t_cell is not None else (w1 + w2 + w3 + w4)
+        w5 = safe_int(r[6]) or 0
+        t_cell = safe_int(r[7]) if len(r) > 7 else None
+        total = t_cell if t_cell is not None else (w1 + w2 + w3 + w4 + w5)
         return {
             "name": name, "prev_month": prev_m, "apr26": apr26,
-            "w1": w1, "w2": w2, "w3": w3, "w4": w4, "total": total,
+            "w1": w1, "w2": w2, "w3": w3, "w4": w4, "w5": w5, "total": total,
         }
 
     brands_list = [
-        get_brand_weekly(24, "Olive", OLIVE_KEYS),
-        get_brand_weekly(25, "Spark", SPARK_KEYS),
-        get_brand_weekly(23, "Open", OPEN_KEYS),
+        get_brand_weekly(27, "Open", OPEN_KEYS),
+        get_brand_weekly(28, "Olive", OLIVE_KEYS),
+        get_brand_weekly(29, "Spark", SPARK_KEYS),
     ]
 
     table_totals = {
@@ -186,6 +198,7 @@ def get_signings() -> dict:
         "w2":         sum(b["w2"] for b in brands_list),
         "w3":         sum(b["w3"] for b in brands_list),
         "w4":         sum(b["w4"] for b in brands_list),
+        "w5":         sum(b["w5"] for b in brands_list),
         "total":      sum(b["total"] for b in brands_list),
     }
 

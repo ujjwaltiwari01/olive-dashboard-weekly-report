@@ -161,6 +161,7 @@ function TAFeeTable({ rows, format }: { rows: any[], format: any }) {
                         <th style={{...thStyle, textAlign: "right"}}>W2</th>
                         <th style={{...thStyle, textAlign: "right"}}>W3</th>
                         <th style={{...thStyle, textAlign: "right"}}>W4</th>
+                        <th style={{...thStyle, textAlign: "right"}}>W5</th>
                         <th style={{...thStyle, textAlign: "right", backgroundColor: "#FFF7ED", color: "#EA580C"}}>Received</th>
                         <th style={{...thStyle, textAlign: "right"}}>Expected</th>
                     </tr>
@@ -176,6 +177,7 @@ function TAFeeTable({ rows, format }: { rows: any[], format: any }) {
                             <td style={{...tdStyle, textAlign: "right", color: "#4B5563"}}>{format(r.w2)}</td>
                             <td style={{...tdStyle, textAlign: "right", color: "#4B5563"}}>{format(r.w3)}</td>
                             <td style={{...tdStyle, textAlign: "right", color: "#4B5563", borderRight: "1px dashed #E5E7EB"}}>{format(r.w4)}</td>
+                            <td style={{...tdStyle, textAlign: "right", color: "#4B5563"}}>{format(r.w5 ?? 0)}</td>
                             
                             <td style={{...tdStyle, textAlign: "right", color: "#E4572E", fontWeight: 800, backgroundColor: "#FFF7ED"}}>{format(r.received)}</td>
                             <td style={{...tdStyle, textAlign: "right", color: "#F97316"}}>{format(r.expected)}</td>

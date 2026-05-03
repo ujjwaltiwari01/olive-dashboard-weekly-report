@@ -38,7 +38,10 @@ export default function RevenuePage() {
 
   return (
     <div style={pageStyle}>
-      <PageHeader title="🟠 Revenue Dashboard (KPI 3 & 4)" subtitle="Channel-wise sales mix & Year-over-Year revenue comparison (₹ in Lakhs)" />
+      <PageHeader
+        title="🟠 Revenue Dashboard — April 2026 (week ending 30 Apr)"
+        subtitle="Channel-wise sales mix and year-over-year revenue comparison (₹ in Lakhs). KPI 3 uses the Revenue sheet target vs actuals when Sales is absent; KPI 4 uses managed-properties YoY from the same workbook."
+      />
 
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "24px", maxWidth: "1400px" }}>
         

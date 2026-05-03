@@ -1,10 +1,10 @@
 """
 Excel Parser — reads the CFO weekly workbook
-`Weekly update - 27.04.2024 v2.xlsx` (multi-sheet).
+`Weekly update - 30.04.2024 v3.xlsx` (multi-sheet).
 
 Production (Railway, Docker): set OLIVE_WEEKLY_EXCEL_PATH or EXCEL_PATH to an absolute path
 where that workbook is stored (volume mount, build artifact, etc.). If unset, the file
-next to the repo root is used: Weekly update - 27.04.2024 v2.xlsx
+next to the repo root is used: Weekly update - 30.04.2024 v3.xlsx
 """
 import os
 import time
@@ -14,14 +14,14 @@ import pandas as pd
 
 # Canonical weekly workbook for this dashboard (repo root). All KPI readers use EXCEL_PATH.
 # Override only via OLIVE_WEEKLY_EXCEL_PATH / EXCEL_PATH — do not hardcode alternate .xlsx names in KPI modules.
-WEEKLY_WORKBOOK_FILENAME = "Weekly update - 27.04.2024 v2.xlsx"
+WEEKLY_WORKBOOK_FILENAME = "Weekly update - 30.04.2024 v3.xlsx"
 _DEFAULT_WORKBOOK = WEEKLY_WORKBOOK_FILENAME
 
 
 def resolve_excel_path() -> str:
     """Resolve the canonical workbook path.
 
-    Default: `<repo-root>/Weekly update - 27.04.2024 v2.xlsx`.
+    Default: `<repo-root>/Weekly update - 30.04.2024 v3.xlsx`.
     Env overrides (`OLIVE_WEEKLY_EXCEL_PATH`, `EXCEL_PATH`) are honoured **only** if they
     point at a file that exists. Any stale path (e.g. an old shell still exporting a v6
     file) is ignored, so the dashboard cannot silently load the wrong workbook.

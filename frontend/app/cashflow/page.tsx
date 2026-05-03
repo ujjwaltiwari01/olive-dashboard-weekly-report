@@ -37,6 +37,7 @@ export default function CashflowPage() {
   const sumW2       = (inflow_totals as any).w2       || inflows.reduce((a: number, c: any) => a + (c.w2       || 0), 0);
   const sumW3       = (inflow_totals as any).w3       || inflows.reduce((a: number, c: any) => a + (c.w3       || 0), 0);
   const sumW4       = (inflow_totals as any).w4       || inflows.reduce((a: number, c: any) => a + (c.w4       || 0), 0);
+  const sumW5       = (inflow_totals as any).w5       || inflows.reduce((a: number, c: any) => a + (c.w5       || 0), 0);
   const sumTotalReceived = (inflow_totals as any).total_received || inflows.reduce((a: number, c: any) => a + (c.total_received || c.received || 0), 0);
   const sumReceived = (inflow_totals as any).received || inflows.reduce((a: number, c: any) => a + (c.received || 0), 0);
   const sumExpected = (inflow_totals as any).expected || inflows.reduce((a: number, c: any) => a + (c.expected || 0), 0);
@@ -72,7 +73,7 @@ export default function CashflowPage() {
         style={{ marginBottom: "28px", borderBottom: "1px solid #E5E7EB", paddingBottom: "16px" }}
       >
         <h1 style={{ fontSize: "26px", fontWeight: 700, color: "#1A1A1A", margin: 0 }}>
-          🏦 Cashflow Summary - April'26
+          🏦 Cashflow Summary — April 2026 (week ending 30 Apr)
         </h1>
       </div>
 
@@ -84,7 +85,7 @@ export default function CashflowPage() {
             <tr style={{ background: "#F9FAFB" }}>
               <TH align="left" rowSpan={2}></TH>
               <TH rowSpan={2}>Target</TH>
-              <TH highlight align="center" colSpan={5}>Received</TH>
+              <TH highlight align="center" colSpan={6}>Received</TH>
               <TH rowSpan={2}>To be collected</TH>
             </tr>
             <tr style={{ background: "#F9FAFB" }}>
@@ -92,6 +93,7 @@ export default function CashflowPage() {
               <TH highlight>W2</TH>
               <TH highlight>W3</TH>
               <TH highlight>W4</TH>
+              <TH highlight>W5</TH>
               <TH highlight>Total</TH>
             </tr>
           </thead>
@@ -100,6 +102,7 @@ export default function CashflowPage() {
             {/* INFLOW HEADER ROW — no amounts, labels only */}
             <tr style={{ background: "#F9FAFB", borderBottom: "2px solid #E5E7EB" }}>
               <td style={{ ...tdStyle, fontWeight: 800, color: "#111827", textTransform: "uppercase" }}>Inflow</td>
+              <td style={{ ...tdStyle }} />
               <td style={{ ...tdStyle }} />
               <td style={{ ...tdStyle }} />
               <td style={{ ...tdStyle }} />
@@ -127,6 +130,9 @@ export default function CashflowPage() {
                 <td className="recv-highlight" style={{ ...tdStyle, textAlign: "right", fontWeight: 700, color: "#E4572E" }}>
                   {inf.w4 > 0 ? fmt(inf.w4) : ""}
                 </td>
+                <td className="recv-highlight" style={{ ...tdStyle, textAlign: "right", fontWeight: 700, color: "#E4572E" }}>
+                  {(inf.w5 ?? 0) > 0 ? fmt(inf.w5) : ""}
+                </td>
                 <td className="recv-highlight" style={{ ...tdStyle, textAlign: "right", fontWeight: 800, color: "#B45309" }}>
                   {(inf.total_received || inf.received || 0) > 0 ? fmt(inf.total_received || inf.received || 0) : ""}
                 </td>
@@ -145,6 +151,7 @@ export default function CashflowPage() {
               <td style={{ ...tdStyle, textAlign: "right", fontWeight: 700, color: "#15803D" }}>{fmt(sumW2)}</td>
               <td style={{ ...tdStyle, textAlign: "right", fontWeight: 700, color: "#15803D" }}>{fmt(sumW3)}</td>
               <td style={{ ...tdStyle, textAlign: "right", fontWeight: 700, color: "#15803D" }}>{fmt(sumW4)}</td>
+              <td style={{ ...tdStyle, textAlign: "right", fontWeight: 700, color: "#15803D" }}>{fmt(sumW5)}</td>
               <td style={{ ...tdStyle, textAlign: "right", fontWeight: 800, color: "#15803D" }}>{fmt(sumTotalReceived)}</td>
               <td style={{ ...tdStyle, textAlign: "right", fontWeight: 700, color: "#15803D" }}>{fmt(sumExpected)}</td>
             </tr>
@@ -153,7 +160,7 @@ export default function CashflowPage() {
             <tr style={{ background: "#FEF2F2", borderTop: "2px solid #FECACA", borderBottom: "1px solid #FECACA" }}>
               <td style={{ ...tdStyle, fontWeight: 800, color: "#991B1B", textTransform: "uppercase" }}>Outflow</td>
               <td style={{ ...tdStyle }} />
-              <td colSpan={5} style={{ ...tdStyle }} />
+              <td colSpan={6} style={{ ...tdStyle }} />
               <td style={{ ...tdStyle, textAlign: "right", fontWeight: 800, color: "#DC2626" }}>{fmt(immediatePayments)}</td>
             </tr>
 

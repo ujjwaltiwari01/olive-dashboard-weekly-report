@@ -22,10 +22,75 @@ function isNewSigningsOpenBrandLine(s: string): boolean {
   return t.includes("new signings") && t.includes("open brand");
 }
 
+/** Strip Excel numbering and a leading bullet so we can classify rows. */
+function stripPortfolioMarkers(s: string): string {
+  return stripLeadingEnumeration(s)
+    .replace(/^\s*[•·▪\-–]\s*/u, "")
+    .trim();
+}
+
+function isSparkBrandHeadingLine(s: string): boolean {
+  return /^spark$/i.test(stripPortfolioMarkers(s));
+}
+
+/** Lines like "Le Grande (Andheri) : 58 keys" — used as Spark sub-items. */
+function isPortfolioKeysLine(s: string): boolean {
+  return /:\s*\d+\s*keys\b/i.test(s);
+}
+
+/** Conversion / Sadahalli note — when it follows Spark key lines, it becomes item 3 under Spark (not a separate header). */
+function isPortfolioProseHeadingLine(s: string): boolean {
+  const t = stripPortfolioMarkers(s).toLowerCase();
+  if (t.includes("sadahalli")) return true;
+  if (t.includes("formally converted") && t.includes("olive") && t.includes("spark")) return true;
+  return false;
+}
+
+type PortfolioBlock =
+  | { type: "main"; num: number; text: string }
+  | { type: "sparkHeading" }
+  | { type: "sparkNested"; items: string[] }
+  | { type: "proseHeading"; text: string };
+
+/** Flat sheet rows → blocks: Spark + key lines + optional Sadahalli/conversion line as numbered items 1–3 under Spark. */
+function buildPortfolioBlocks(bodyRows: string[]): PortfolioBlock[] {
+  const blocks: PortfolioBlock[] = [];
+  let i = 0;
+  let mainNum = 0;
+  while (i < bodyRows.length) {
+    const raw = bodyRows[i];
+    if (isSparkBrandHeadingLine(raw)) {
+      blocks.push({ type: "sparkHeading" });
+      i += 1;
+      const items: string[] = [];
+      while (i < bodyRows.length && isPortfolioKeysLine(bodyRows[i])) {
+        items.push(bodyRows[i]);
+        i += 1;
+      }
+      if (i < bodyRows.length && isPortfolioProseHeadingLine(bodyRows[i])) {
+        items.push(bodyRows[i]);
+        i += 1;
+      }
+      if (items.length) blocks.push({ type: "sparkNested", items });
+      continue;
+    }
+    if (isPortfolioProseHeadingLine(raw)) {
+      blocks.push({ type: "proseHeading", text: stripPortfolioMarkers(raw) });
+      i += 1;
+      continue;
+    }
+    mainNum += 1;
+    blocks.push({ type: "main", num: mainNum, text: raw });
+    i += 1;
+  }
+  return blocks;
+}
+
 const COLORS = {
   Olive: "#1A1A1A",
   Open:  "#E4572E",
   Spark: "#9CA3AF",
+  Overall: "#0d9488",
 } as const;
 
 // ─── CUSTOM DOT: dynamic positioning preventing label overlap ────────────
@@ -72,16 +137,55 @@ const makeDot = (
 
 
 // ─── CUSTOM TOOLTIP: Shows ONLY the targeted brand's metrics ─────────────────
-const CustomTooltip = ({ active, payload, label, activeBrand }: any) => {
+const CustomTooltip = ({ active, payload, activeBrand }: any) => {
   if (!active || !payload?.length || !activeBrand) return null;
-  
-  // Find the exact payload item corresponding to the line the user is hovering
+
   const p = payload.find((item: any) => item.name === activeBrand);
   if (!p) return null;
 
   const brand = p.name;
-  const cumKeys = p.payload[`${brand}_cum_keys`] || 0;
   const color = COLORS[brand as keyof typeof COLORS] || p.color;
+
+  if (brand === "Overall") {
+    const row = p.payload;
+    const propsVal = row?.overall_cum_props ?? p.value;
+    const keysVal = row?.overall_cum_keys ?? 0;
+    return (
+      <div style={{
+        background: "#fff",
+        border: `1.5px solid ${color}`,
+        borderRadius: "12px",
+        padding: "14px 18px",
+        fontSize: "13px",
+        boxShadow: "0 10px 40px rgba(0,0,0,0.15)",
+        minWidth: "180px",
+      }}>
+        <div style={{
+          display: "flex",
+          alignItems: "center",
+          gap: "8px",
+          marginBottom: "12px",
+          paddingBottom: "8px",
+          borderBottom: "1px solid #F3F4F6",
+        }}>
+          <span style={{ width: 10, height: 10, borderRadius: "50%", background: color }} />
+          <span style={{ fontWeight: 700, color: "#374151", textTransform: "uppercase", letterSpacing: "0.5px" }}>Overall</span>
+        </div>
+        <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", gap: "12px" }}>
+            <span style={{ color: "#6B6B6B", fontWeight: 500 }}>Cumulative properties</span>
+            <span style={{ color, fontWeight: 800 }}>{propsVal}</span>
+          </div>
+          <div style={{ display: "flex", justifyContent: "space-between", gap: "12px" }}>
+            <span style={{ color: "#6B6B6B", fontWeight: 500 }}>Cumulative keys</span>
+            <span style={{ color, fontWeight: 800 }}>{keysVal}</span>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  const cumKeys = p.payload[`${brand}_cum_keys`] || 0;
 
   return (
     <div style={{
@@ -94,29 +198,49 @@ const CustomTooltip = ({ active, payload, label, activeBrand }: any) => {
       minWidth: "180px",
     }}>
 
-      <div style={{ 
-        display: "flex", 
-        alignItems: "center", 
-        gap: "8px", 
+      <div style={{
+        display: "flex",
+        alignItems: "center",
+        gap: "8px",
         marginBottom: "12px",
         paddingBottom: "8px",
-        borderBottom: "1px solid #F3F4F6"
+        borderBottom: "1px solid #F3F4F6",
       }}>
         <span style={{ width: 10, height: 10, borderRadius: "50%", background: color }} />
         <span style={{ fontWeight: 700, color: "#374151", textTransform: "uppercase", letterSpacing: "0.5px" }}>{brand}</span>
       </div>
-      
+
       <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
         <div style={{ display: "flex", justifyContent: "space-between", gap: "12px" }}>
           <span style={{ color: "#6B6B6B", fontWeight: 500 }}>Cumulative Property</span>
-          <span style={{ color: color, fontWeight: 800 }}>{p.value}</span>
+          <span style={{ color, fontWeight: 800 }}>{p.value}</span>
         </div>
         <div style={{ display: "flex", justifyContent: "space-between", gap: "12px" }}>
           <span style={{ color: "#6B6B6B", fontWeight: 500 }}>Cumulative Keys</span>
-          <span style={{ color: color, fontWeight: 800 }}>{cumKeys}</span>
+          <span style={{ color, fontWeight: 800 }}>{cumKeys}</span>
         </div>
       </div>
     </div>
+  );
+};
+
+const makeOverallDot = (props: any) => {
+  const { cx, cy, value, payload } = props;
+  if (cx == null || cy == null || value == null) return null;
+  const isRecent = payload.isRecent;
+  const c = COLORS.Overall;
+  const r = isRecent ? 5 : 3;
+  const strokeW = isRecent ? 2 : 1;
+  const textY = cy - 18;
+  return (
+    <g style={{ pointerEvents: "none" }}>
+      <circle cx={cx} cy={cy} r={r} fill={c} stroke="#fff" strokeWidth={strokeW} />
+      {isRecent && (
+        <text x={cx} y={textY} textAnchor="middle" fontSize={11} fontWeight={800} fill={c}>
+          {value}
+        </text>
+      )}
+    </g>
   );
 };
 
@@ -165,6 +289,8 @@ export default function SigningsPage() {
       Olive_cum_keys: m.Olive_cum_keys,
       Open_cum_keys:  m.Open_cum_keys,
       Spark_cum_keys: m.Spark_cum_keys,
+      overall_cum_props: m.overall_cum_props ?? 0,
+      overall_cum_keys: m.overall_cum_keys ?? 0,
     };
   });
 
@@ -253,6 +379,20 @@ export default function SigningsPage() {
                       connectNulls
                     />
                   ))}
+                  <Line
+                    key="capture-Overall"
+                    type="monotone"
+                    dataKey="overall_cum_props"
+                    name="Overall"
+                    stroke="transparent"
+                    strokeWidth={30}
+                    dot={false}
+                    activeDot={false}
+                    legendType="none"
+                    onMouseEnter={() => setActiveBrand("Overall")}
+                    onMouseMove={() => setActiveBrand("Overall")}
+                    connectNulls
+                  />
 
                   <Line
                     type="monotone"
@@ -295,6 +435,19 @@ export default function SigningsPage() {
                     connectNulls
                     style={{ pointerEvents: "none" }}
                   />
+                  <Line
+                    type="monotone"
+                    dataKey="overall_cum_props"
+                    name="Overall"
+                    stroke={COLORS.Overall}
+                    strokeWidth={2.5}
+                    dot={makeOverallDot}
+                    activeDot={{ r: 7, strokeWidth: 2, stroke: "#fff", fill: COLORS.Overall }}
+                    onMouseEnter={() => setActiveBrand("Overall")}
+                    onMouseMove={() => setActiveBrand("Overall")}
+                    connectNulls
+                    style={{ pointerEvents: "none" }}
+                  />
                 </LineChart>
               </ResponsiveContainer>
             </div>
@@ -314,7 +467,7 @@ export default function SigningsPage() {
                 <div style={{ fontSize: "10px", fontWeight: 700, color: "#9CA3AF", textTransform: "uppercase", letterSpacing: "0.06em" }}>
                   Total Properties
                 </div>
-                <div style={{ fontSize: "26px", fontWeight: 800, color: "#1A1A1A", letterSpacing: "-0.5px" }}>
+                <div style={{ fontSize: "26px", fontWeight: 800, color: "#059669", letterSpacing: "-0.5px" }}>
                   {data.total_properties ?? 0}
                 </div>
               </div>
@@ -331,7 +484,7 @@ export default function SigningsPage() {
                 <div style={{ fontSize: "10px", fontWeight: 700, color: "#9CA3AF", textTransform: "uppercase", letterSpacing: "0.06em" }}>
                   Total Keys
                 </div>
-                <div style={{ fontSize: "26px", fontWeight: 800, color: "#E4572E", letterSpacing: "-0.5px" }}>
+                <div style={{ fontSize: "26px", fontWeight: 800, color: "#059669", letterSpacing: "-0.5px" }}>
                   {data.total_keys ?? 0}
                 </div>
               </div>
@@ -384,6 +537,7 @@ export default function SigningsPage() {
                     <th style={{ padding: "8px 12px", textAlign: "center", fontSize: "11px", fontWeight: 700, color: "#9CA3AF", textTransform: "uppercase", letterSpacing: "0.5px" }}>W2</th>
                     <th style={{ padding: "8px 12px", textAlign: "center", fontSize: "11px", fontWeight: 700, color: "#9CA3AF", textTransform: "uppercase", letterSpacing: "0.5px" }}>W3</th>
                     <th style={{ padding: "8px 12px", textAlign: "center", fontSize: "11px", fontWeight: 700, color: "#9CA3AF", textTransform: "uppercase", letterSpacing: "0.5px" }}>W4</th>
+                    <th style={{ padding: "8px 12px", textAlign: "center", fontSize: "11px", fontWeight: 700, color: "#9CA3AF", textTransform: "uppercase", letterSpacing: "0.5px" }}>W5</th>
                     <th style={{ padding: "8px 12px", textAlign: "center", fontSize: "11px", fontWeight: 700, color: "#E4572E", textTransform: "uppercase", letterSpacing: "0.5px", background: "#FFF4F1" }}>April '26</th>
                   </tr>
                 </thead>
@@ -396,6 +550,7 @@ export default function SigningsPage() {
                       <td style={{ padding: "10px 12px", textAlign: "center", color: "#6B7280" }}>{b.w2}</td>
                       <td style={{ padding: "10px 12px", textAlign: "center", color: "#6B7280" }}>{b.w3}</td>
                       <td style={{ padding: "10px 12px", textAlign: "center", color: "#6B7280" }}>{b.w4}</td>
+                      <td style={{ padding: "10px 12px", textAlign: "center", color: "#6B7280" }}>{b.w5 ?? "—"}</td>
                       <td style={{ padding: "10px 12px", textAlign: "center", fontWeight: 700, color: "#E4572E", background: "#FFFBF0" }}>{b.total}</td>
                     </tr>
                   ))}
@@ -407,6 +562,7 @@ export default function SigningsPage() {
                       <td style={{ padding: "10px 12px", textAlign: "center", fontWeight: 700, color: "#1A1A1A" }}>{data.brands_totals.w2}</td>
                       <td style={{ padding: "10px 12px", textAlign: "center", fontWeight: 700, color: "#1A1A1A" }}>{data.brands_totals.w3}</td>
                       <td style={{ padding: "10px 12px", textAlign: "center", fontWeight: 700, color: "#1A1A1A" }}>{data.brands_totals.w4}</td>
+                      <td style={{ padding: "10px 12px", textAlign: "center", fontWeight: 700, color: "#1A1A1A" }}>{data.brands_totals.w5 ?? "—"}</td>
                       <td style={{ padding: "10px 12px", textAlign: "center", fontWeight: 800, color: "#E4572E", fontSize: "15px", background: "#FFF4F1" }}>{data.brands_totals.total}</td>
                     </tr>
                   )}
@@ -432,6 +588,21 @@ export default function SigningsPage() {
                   ? ""
                   : (stripLeadingEnumeration(firstLine) || "Open brand");
                 const bodyRows = portfolioRows.slice(1);
+                const portfolioBlocks = buildPortfolioBlocks(bodyRows);
+                const rowStyle: React.CSSProperties = {
+                  marginBottom: "8px",
+                  display: "flex",
+                  gap: "8px",
+                  alignItems: "flex-start",
+                };
+                const headingStyle: React.CSSProperties = {
+                  fontSize: "12.5px",
+                  fontWeight: 800,
+                  color: "#1A1A1A",
+                  marginTop: "10px",
+                  marginBottom: "6px",
+                  lineHeight: 1.45,
+                };
                 return (
                   <>
                     {!hideSubHeader && subHeader ? (
@@ -443,23 +614,53 @@ export default function SigningsPage() {
                         letterSpacing: "0.02em",
                       }}>{subHeader}</div>
                     ) : null}
-                    <ul style={{ margin: 0, padding: 0, listStyle: "none", fontSize: "12.5px", color: "#4B5563", lineHeight: "1.6" }}>
-                      {bodyRows.map((text: string, idx, arr) => (
-                        <li
-                          key={idx}
-                          style={{
-                            marginBottom: idx < arr.length - 1 ? "8px" : 0,
-                            display: "flex",
-                            gap: "8px",
-                            alignItems: "flex-start",
-                          }}
-                        >
-                          <span style={{ fontWeight: 700, color: "#E4572E", flexShrink: 0 }}>{idx + 1}.</span>
-                          <span style={{ fontWeight: 800, color: "#1A1A1A", flexShrink: 0 }} aria-hidden>•</span>
-                          <span>{stripLeadingEnumeration(text)}</span>
-                        </li>
-                      ))}
-                    </ul>
+                    <div style={{ margin: 0, fontSize: "12.5px", color: "#4B5563", lineHeight: "1.6" }}>
+                      {portfolioBlocks.map((b, bi) => {
+                        if (b.type === "main") {
+                          return (
+                            <div key={`m-${bi}`} style={{ ...rowStyle, marginBottom: "8px" }}>
+                              <span style={{ fontWeight: 700, color: "#E4572E", flexShrink: 0 }}>{b.num}.</span>
+                              <span style={{ fontWeight: 800, color: "#1A1A1A", flexShrink: 0 }} aria-hidden>•</span>
+                              <span>{stripLeadingEnumeration(b.text)}</span>
+                            </div>
+                          );
+                        }
+                        if (b.type === "sparkHeading") {
+                          return (
+                            <div key={`sh-${bi}`} style={{ ...headingStyle, marginTop: bi === 0 ? 0 : "10px" }}>
+                              Spark
+                            </div>
+                          );
+                        }
+                        if (b.type === "sparkNested") {
+                          return (
+                            <div key={`sn-${bi}`} style={{ margin: "0 0 12px 0" }}>
+                              {b.items.map((text, j) => (
+                                <div
+                                  key={j}
+                                  style={{
+                                    ...rowStyle,
+                                    marginBottom: j < b.items.length - 1 ? "8px" : 0,
+                                  }}
+                                >
+                                  <span style={{ fontWeight: 700, color: "#E4572E", flexShrink: 0 }}>{j + 1}.</span>
+                                  <span style={{ fontWeight: 800, color: "#1A1A1A", flexShrink: 0 }} aria-hidden>•</span>
+                                  <span>{stripPortfolioMarkers(text)}</span>
+                                </div>
+                              ))}
+                            </div>
+                          );
+                        }
+                        if (b.type === "proseHeading") {
+                          return (
+                            <div key={`ph-${bi}`} style={{ ...headingStyle, marginTop: "12px" }}>
+                              {b.text}
+                            </div>
+                          );
+                        }
+                        return null;
+                      })}
+                    </div>
                   </>
                 );
               })()}

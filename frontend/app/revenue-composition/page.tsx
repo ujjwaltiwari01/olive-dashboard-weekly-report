@@ -3,8 +3,12 @@
 import { useEffect, useState, useCallback } from "react";
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid,
+  ComposedChart,
   ResponsiveContainer, LabelList,
-  useXAxisScale, useYAxisScale,
+  Tooltip as RechartsTooltip,
+  useXAxisScale,
+  useYAxisScale,
+  usePlotArea,
 } from "recharts";
 import { fetchKPI } from "../../lib/api";
 
@@ -14,28 +18,22 @@ function toL(val: number) {
   return `₹${(val / 100_000).toFixed(0)}L`;
 }
 
-/** Lakh formatter that keeps one decimal for small values (<10L) so e.g. ₹32,945 reads as ₹0.3L
- * instead of being rounded to ₹0L by `toL`. Used for the franchised Open side label. */
-function toLPrecise(val: number) {
-  const l = (val || 0) / 100_000;
-  if (Math.abs(l) >= 10) return `₹${l.toFixed(0)}L`;
-  if (Math.abs(l) >= 1) return `₹${l.toFixed(1)}L`;
-  return `₹${l.toFixed(2)}L`;
-}
+const MAX_COERCED_BARS = 64;
 
 /** Turn bars field into an array (handles array, null, or { "0": row, "1": row } from some serializers). */
 function coerceBarsArray(barsRaw: unknown): any[] {
-  if (Array.isArray(barsRaw)) return barsRaw;
+  if (Array.isArray(barsRaw)) return barsRaw.slice(0, MAX_COERCED_BARS);
   if (barsRaw == null || typeof barsRaw !== "object") return [];
   const o = barsRaw as Record<string, unknown>;
   const keys = Object.keys(o);
   if (!keys.length) return [];
   const numericKeys = keys.filter((k) => /^\d+$/.test(k));
   if (numericKeys.length === keys.length) {
-    return numericKeys
+    const sorted = numericKeys
       .map((k) => Number(k))
       .sort((a, b) => a - b)
       .map((k) => o[String(k)]);
+    return sorted.slice(0, MAX_COERCED_BARS);
   }
   return [];
 }
@@ -72,6 +70,9 @@ function normalizeRevenueCompositionPayload(raw: any) {
     }
   }
   const s3 = out.section3;
+  if (s3 && Array.isArray(s3.bars) && s3.bars.length > MAX_COERCED_BARS) {
+    s3.bars = s3.bars.slice(0, MAX_COERCED_BARS);
+  }
   if (s3 && Array.isArray(s3.bars) && s3.bars.length > 0) {
     const toN = (a: unknown, b?: unknown) => {
       const x = a ?? b;
@@ -81,10 +82,11 @@ function normalizeRevenueCompositionPayload(raw: any) {
     s3.bars = s3.bars
       .filter((b: any) => b != null && typeof b === "object")
       .map((b: any) => {
-        const fr_open = Math.round(toN(b.fr_open, b.open));
-        const fr_others = Math.round(toN(b.fr_others, b.others));
-        let total = Math.round(toN(b.total));
-        if (total <= 0) total = fr_open + fr_others;
+        const rnd2 = (n: number) => Math.round(n * 100) / 100;
+        const fr_open = rnd2(toN(b.fr_open, b.open));
+        const fr_others = rnd2(toN(b.fr_others, b.others));
+        let total = rnd2(toN(b.total));
+        if (total <= 0) total = rnd2(fr_open + fr_others);
         const t = total > 0 ? total : 1;
         const fr_open_pct =
           b.fr_open_pct != null || b.open_pct != null
@@ -94,6 +96,9 @@ function normalizeRevenueCompositionPayload(raw: any) {
           b.fr_others_pct != null || b.others_pct != null
             ? Math.round(toN(b.fr_others_pct, b.others_pct))
             : Math.round((fr_others / t) * 100);
+        const cp = b.contribution_pct;
+        const contribution_pct =
+          cp != null && cp !== "" && Number.isFinite(Number(cp)) ? Number(cp) : null;
         return {
           name: String(b.name ?? ""),
           fr_open,
@@ -101,107 +106,115 @@ function normalizeRevenueCompositionPayload(raw: any) {
           total,
           fr_open_pct,
           fr_others_pct,
+          ...(contribution_pct != null ? { contribution_pct: contribution_pct } : {}),
         };
       });
     if (s3.mom_open_pct == null && s3.momOpenPct != null) s3.mom_open_pct = s3.momOpenPct;
     if (s3.mom_others_pct == null && s3.momOthersPct != null) s3.mom_others_pct = s3.momOthersPct;
     if (s3.mom_total_pct == null && s3.momTotalPct != null) s3.mom_total_pct = s3.momTotalPct;
 
-    // Revenue sheet franchised MoM is always Feb → March → April (part); never YoY "March 25/26" labels.
+    // Revenue sheet franchised MoM is always Feb → March → April; never YoY "March 25/26" labels.
     if (s3.bars.length === 3) {
-      const canon = ["Feb", "March", "April (part)"];
+      const canon = ["Feb '26", "March '26", "April '26"];
       s3.bars = s3.bars.map((b: any, i: number) => ({ ...b, name: canon[i] ?? b.name }));
     }
   }
   return out;
 }
 
-function pctPill(v: unknown) {
-  if (v == null || v === "" || Number.isNaN(Number(v))) return "—";
-  return `${Number(v)}`;
+/** Actual ÷ Budget as integer %; falls back to API `achievement_pct` when budget is zero. */
+function channelAchievementPct(row: { Budget: number; Actual: number; achievement_pct: number }) {
+  const b = Number(row.Budget) || 0;
+  const a = Number(row.Actual) || 0;
+  if (b > 0) return Math.round((a / b) * 100);
+  const p = Number(row.achievement_pct);
+  return Number.isFinite(p) ? Math.round(p) : 0;
 }
 
-function momPillText(v: unknown) {
-  if (v == null || v === "" || Number.isNaN(Number(v))) return "—";
-  const n = Number(v);
-  const sign = n > 0 ? "+" : "";
-  return `${sign}${n.toFixed(1)}%`;
+function achievementPctColor(pct: number) {
+  if (pct >= 100) return "#16A34A";
+  if (pct >= 90) return "#111827";
+  if (pct >= 75) return "#CA8A04";
+  return "#DC2626";
 }
 
-function PctLabel(props: any) {
-  const { x, y, width, height, value, pct } = props;
+/** Currency label above each Budget / Actual bar (lakhs). */
+function BvaAmountAboveBar(props: any) {
+  const { x, y, width, value } = props;
   const v = Number(value);
-  const h = Number(height);
-  if (value == null || Number.isNaN(v) || v === 0 || Number.isNaN(h) || h < 10) return null;
-  const p = pct != null && !Number.isNaN(Number(pct)) ? pct : "—";
+  if (!Number.isFinite(v) || v <= 0) return null;
+  const cx = x + width / 2;
+  const ty = (typeof y === "number" ? y : 0) - 6;
   return (
     <text
-      x={x + width / 2}
-      y={y + height / 2}
+      x={cx}
+      y={ty}
       textAnchor="middle"
-      dominantBaseline="middle"
-      style={{ fontSize: "14px", fontWeight: 700, fill: "#fff" }}
+      dominantBaseline="auto"
+      style={{
+        fontSize: 12,
+        fontWeight: 700,
+        fill: "#1F2937",
+        fontVariantNumeric: "tabular-nums",
+        letterSpacing: "-0.02em",
+      }}
     >
-      {p}%
+      {toL(v)}
     </text>
   );
 }
 
-function AmountLabel(props: any) {
-  const { x, y, width, height, value, amount } = props;
-  const v = Number(value);
-  const h = Number(height);
-  if (value == null || Number.isNaN(v) || v === 0 || Number.isNaN(h) || h < 8) return null;
+function BvaChannelAxisTick(props: any) {
+  const { x, y, payload, rows } = props;
+  const label =
+    typeof payload === "string"
+      ? payload
+      : payload?.value ?? (typeof payload?.payload === "string" ? payload.payload : payload?.payload?.channel);
+  const row = rows?.find((r: { channel: string }) => r.channel === label);
+  if (!row) return <g />;
+  const pct = channelAchievementPct(row);
+  const pctColor = achievementPctColor(pct);
   return (
-    <text
-      x={x + width + 12}
-      y={y + height / 2}
-      textAnchor="start"
-      dominantBaseline="middle"
-      style={{ fontSize: "12px", fontWeight: 700, fill: "#374151" }}
-    >
-      {amount}
-    </text>
-  );
-}
-
-/** Side-label for the (very small) franchised "Open" slice.
- * The Open slice is only 1–4% of each bar, so the regular inside-bar PctLabel/AmountLabel
- * height guards strip it. This label sits to the right of the bar, anchored at the slice top,
- * and always renders so the user can read both the Open amount and percentage. */
-function FrOpenSideLabel(props: any) {
-  const { x, y, width, height, value, amount, pct } = props;
-  const v = Number(value);
-  if (value == null || Number.isNaN(v) || v <= 0) return null;
-  const h = Number.isFinite(Number(height)) ? Number(height) : 0;
-  const ty = y + Math.max(6, h / 2);
-  const cx = x + width + 10;
-  return (
-    <g pointerEvents="none">
+    <g transform={`translate(${x},${y})`}>
       <text
-        x={cx}
-        y={ty}
-        textAnchor="start"
-        dominantBaseline="middle"
-        style={{ fontSize: "11px", fontWeight: 700, fontVariantNumeric: "tabular-nums" }}
+        x={0}
+        y={0}
+        dy={14}
+        textAnchor="middle"
+        style={{
+          fontSize: 12,
+          fontWeight: 700,
+          fill: "#374151",
+          letterSpacing: "0.06em",
+          textTransform: "uppercase",
+        }}
       >
-        <tspan style={{ fill: "#64748B", fontWeight: 700, letterSpacing: "0.04em" }}>Open</tspan>
-        <tspan dx={6} style={{ fill: "#1F2937", fontWeight: 800 }}>{amount}</tspan>
-        <tspan dx={4} style={{ fill: "#9CA3AF", fontWeight: 600 }}>· {pct}%</tspan>
+        {row.channel}
+      </text>
+      <text
+        x={0}
+        y={0}
+        dy={34}
+        textAnchor="middle"
+        style={{ fontSize: 13, fontWeight: 800, fill: pctColor, fontVariantNumeric: "tabular-nums" }}
+      >
+        {`${pct}% of budget`}
       </text>
     </g>
   );
 }
 
-/** Section 1 — Online / Offline (managed) */
 function StackedSectionOnlineOffline({
-  title, overallPct, badgeColor, onlinePct, offlinePct, bars, delay = 0,
+  title,
+  periodLabel,
+  bars,
+  achievementOnlinePct,
+  achievementOfflinePct,
+  achievementOverallPct,
+  delay = 0,
 }: {
   title: string;
-  overallPct: number;
-  badgeColor: string;
-  onlinePct: number;
-  offlinePct: number;
+  periodLabel?: string;
   bars: {
     name: string;
     online: number;
@@ -210,99 +223,219 @@ function StackedSectionOnlineOffline({
     online_pct: number;
     offline_pct: number;
   }[];
+  achievementOnlinePct: number;
+  achievementOfflinePct: number;
+  achievementOverallPct: number;
   delay?: number;
 }) {
-  const chartData = bars.map((b) => ({
-    name: b.name,
-    Online: b.online,
-    Offline: b.offline,
-    total: b.total,
-    online_pct: b.online_pct,
-    offline_pct: b.offline_pct,
-  }));
+  const targetRow = bars.find((b) => String(b.name).toLowerCase().includes("target")) ?? bars[0];
+  const actualRow = bars.find((b) => String(b.name).toLowerCase().includes("actual")) ?? bars[1];
+  const chartData = [
+    {
+      channel: "Online",
+      Budget: Number(targetRow?.online) || 0,
+      Actual: Number(actualRow?.online) || 0,
+      achievement_pct: achievementOnlinePct,
+    },
+    {
+      channel: "Offline",
+      Budget: Number(targetRow?.offline) || 0,
+      Actual: Number(actualRow?.offline) || 0,
+      achievement_pct: achievementOfflinePct,
+    },
+    {
+      channel: "Overall",
+      Budget: Number(targetRow?.total) || 0,
+      Actual: Number(actualRow?.total) || 0,
+      achievement_pct: achievementOverallPct,
+    },
+  ];
+
+  const periodLine =
+    periodLabel?.match(/\(([^)]+)\)/)?.[1]?.replace(/'/g, " — ") ?? periodLabel ?? null;
+
+  const tooltipFmt = (v: number | undefined, name: string) => [
+    `${toL(Number(v) || 0)}${name === "Budget" ? " (target)" : ""}`,
+    name,
+  ];
+
+  const legendSwatch: React.CSSProperties = {
+    display: "inline-flex",
+    alignItems: "center",
+    gap: "8px",
+    fontSize: "12px",
+    fontWeight: 600,
+    color: "#4B5563",
+    letterSpacing: "0.01em",
+  };
 
   return (
     <div className="rc-card" style={{ ...cardStyle, animationDelay: `${delay}ms` }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "20px" }}>
-        <h3 style={cardHeaderStyle}>{title}</h3>
-        <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: "6px" }}>
-          <span style={{ fontSize: "11px", fontWeight: 600, color: "#6B7280", letterSpacing: "0.04em" }}>Growth rates</span>
-          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", background: "#F3F4F6", border: "1px solid #E5E7EB", borderRadius: "8px", padding: "4px 14px", minWidth: "72px" }}>
-              <span style={{ fontSize: "10px", fontWeight: 600, color: "#9CA3AF", textTransform: "uppercase", letterSpacing: "0.5px" }}>Online</span>
-              <span style={{ fontSize: "16px", fontWeight: 800, color: "#374151" }}>{onlinePct}%</span>
-            </div>
-            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", background: "#FFF4F1", border: "1px solid #FECAB4", borderRadius: "8px", padding: "4px 14px", minWidth: "72px" }}>
-              <span style={{ fontSize: "10px", fontWeight: 600, color: "#E4572E", textTransform: "uppercase", letterSpacing: "0.5px" }}>Offline</span>
-              <span style={{ fontSize: "16px", fontWeight: 800, color: "#E4572E" }}>{offlinePct}%</span>
-            </div>
-            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", background: "#F9FAFB", border: "1px solid #E5E7EB", borderRadius: "8px", padding: "4px 14px", minWidth: "72px" }}>
-              <span style={{ fontSize: "10px", fontWeight: 600, color: "#9CA3AF", textTransform: "uppercase", letterSpacing: "0.5px" }}>Overall</span>
-              <span style={{ fontSize: "16px", fontWeight: 800, color: badgeColor }}>{overallPct}%</span>
-            </div>
-          </div>
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "flex-start",
+          gap: "20px",
+          marginBottom: "20px",
+          flexWrap: "wrap",
+        }}
+      >
+        <div style={{ minWidth: 0 }}>
+          <h3 style={{ ...cardHeaderStyle, marginBottom: periodLine ? 8 : 0 }}>{title}</h3>
+          {periodLine ? (
+            <p
+              style={{
+                margin: 0,
+                fontSize: "14px",
+                fontWeight: 600,
+                color: "#6B7280",
+                letterSpacing: "0.02em",
+              }}
+            >
+              {periodLine}
+            </p>
+          ) : null}
+        </div>
+        <div style={{ display: "flex", alignItems: "center", gap: "22px", flexShrink: 0, paddingTop: "2px" }}>
+          <span style={legendSwatch}>
+            <span
+              style={{
+                width: 20,
+                height: 13,
+                borderRadius: 3,
+                background: "#9CA3AF",
+                border: "2px dashed #57534E",
+                boxSizing: "border-box",
+              }}
+            />
+            Budget (target)
+          </span>
+          <span style={legendSwatch}>
+            <span
+              style={{
+                width: 20,
+                height: 13,
+                borderRadius: 3,
+                background: "#F05A28",
+                boxSizing: "border-box",
+              }}
+            />
+            Actual
+          </span>
         </div>
       </div>
 
-      <div style={{ width: "100%", minWidth: 0, height: "300px" }}>
+      <div style={{ width: "100%", minWidth: 0, height: "360px" }}>
         <ResponsiveContainer width="100%" height="100%">
-          <BarChart data={chartData} margin={{ top: 8, right: 80, left: 0, bottom: 0 }} barSize={88}>
+          <BarChart
+            data={chartData}
+            margin={{ top: 36, right: 16, left: 8, bottom: 56 }}
+            barCategoryGap="22%"
+            barGap={8}
+          >
             <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E5E7EB" />
-            <XAxis dataKey="name" tick={{ fontSize: 13, fontWeight: 700, fill: "#374151" }} axisLine={false} tickLine={false} />
-            <YAxis hide />
-            <Bar dataKey="Offline" stackId="a" fill="#E4572E" radius={[0, 0, 4, 4]} minPointSize={2} isAnimationActive animationDuration={800} animationEasing="ease-out">
-              <LabelList dataKey="Offline" content={(props: any) => (
-                <PctLabel {...props} pct={chartData[props.index]?.offline_pct} />
-              )} />
-              <LabelList dataKey="Offline" content={(props: any) => (
-                <AmountLabel {...props} amount={toL(chartData[props.index]?.Offline ?? 0)} />
-              )} />
+            <XAxis
+              dataKey="channel"
+              tick={(props: any) => <BvaChannelAxisTick {...props} rows={chartData} />}
+              axisLine={{ stroke: "#E5E7EB" }}
+              tickLine={false}
+              interval={0}
+              height={52}
+            />
+            <YAxis
+              tick={{ fontSize: 11, fill: "#6B7280", fontWeight: 500 }}
+              axisLine={false}
+              tickLine={false}
+              tickFormatter={(v) => toL(Number(v))}
+              width={58}
+            />
+            <RechartsTooltip
+              cursor={{ fill: "#F9FAFB" }}
+              contentStyle={{
+                borderRadius: 10,
+                border: "1px solid #E5E7EB",
+                fontSize: 12,
+                boxShadow: "0 4px 12px rgba(0,0,0,0.06)",
+              }}
+              formatter={tooltipFmt as any}
+            />
+            <Bar
+              dataKey="Budget"
+              name="Budget"
+              fill="#9CA3AF"
+              stroke="#57534E"
+              strokeWidth={2}
+              strokeDasharray="5 4"
+              radius={[4, 4, 0, 0]}
+              maxBarSize={52}
+              isAnimationActive
+              animationDuration={800}
+              animationEasing="ease-out"
+            >
+              <LabelList dataKey="Budget" position="top" content={BvaAmountAboveBar} />
             </Bar>
-            <Bar dataKey="Online" stackId="a" fill="#9CA3AF" radius={[4, 4, 0, 0]} minPointSize={2} isAnimationActive animationDuration={800} animationEasing="ease-out">
-              <LabelList dataKey="Online" content={(props: any) => (
-                <PctLabel {...props} pct={chartData[props.index]?.online_pct} />
-              )} />
-              <LabelList dataKey="Online" content={(props: any) => (
-                <AmountLabel {...props} amount={toL(chartData[props.index]?.Online ?? 0)} />
-              )} />
+            <Bar
+              dataKey="Actual"
+              name="Actual"
+              fill="#F05A28"
+              radius={[4, 4, 0, 0]}
+              maxBarSize={52}
+              isAnimationActive
+              animationDuration={800}
+              animationEasing="ease-out"
+            >
+              <LabelList dataKey="Actual" position="top" content={BvaAmountAboveBar} />
             </Bar>
           </BarChart>
         </ResponsiveContainer>
-      </div>
-
-      <div style={{ display: "flex", gap: "32px", marginTop: "16px", paddingTop: "16px", borderTop: "1px solid #E5E7EB", alignItems: "flex-end" }}>
-        {bars.map((b) => (
-          <div key={b.name}>
-            <div style={{ fontSize: "11px", color: "#9CA3AF", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em" }}>{b.name}</div>
-            <div style={{ fontSize: "20px", fontWeight: 800, color: "#111827" }}>{toL(b.total)}</div>
-          </div>
-        ))}
-        <div style={{ marginLeft: "auto", textAlign: "right" }}>
-          <div style={{ display: "flex", gap: "14px", justifyContent: "flex-end" }}>
-            <span style={{ display: "flex", alignItems: "center", gap: "5px", fontSize: "12px", color: "#4B5563" }}>
-              <span style={{ width: "10px", height: "10px", borderRadius: "2px", background: "#9CA3AF", display: "inline-block" }} />
-              Online
-            </span>
-            <span style={{ display: "flex", alignItems: "center", gap: "5px", fontSize: "12px", color: "#4B5563" }}>
-              <span style={{ width: "10px", height: "10px", borderRadius: "2px", background: "#E4572E", display: "inline-block" }} />
-              Offline
-            </span>
-          </div>
-        </div>
       </div>
     </div>
   );
 }
 
-/** Section 2 — Short stay / Long stay (managed YoY) */
+function yoyGrowthFromValues(prev: number, next: number) {
+  const p = Number(prev) || 0;
+  if (p <= 0) return 0;
+  return Math.round(((Number(next) - p) / p) * 100);
+}
+
+function YoySegmentAxisTick(props: any) {
+  const { x, y, payload } = props;
+  const label =
+    typeof payload === "string"
+      ? payload
+      : payload?.value ?? (typeof payload?.payload === "string" ? payload.payload : payload?.payload?.segment);
+  return (
+    <g transform={`translate(${x},${y})`}>
+      <text
+        x={0}
+        y={0}
+        dy={14}
+        textAnchor="middle"
+        style={{
+          fontSize: 12,
+          fontWeight: 700,
+          fill: "#374151",
+          letterSpacing: "0.06em",
+          textTransform: "uppercase",
+        }}
+      >
+        {String(label ?? "")}
+      </text>
+    </g>
+  );
+}
+
+/** Section 2 — YoY managed: grouped Apr '25 vs Apr '26 per segment (Short / Long / Overall), styled like Budget vs Actual. */
 function StackedSectionShortLong({
-  title, overallPct, badgeColor, shortStayPct, longStayPct, bars, delay = 0,
+  title,
+  periodLabel,
+  bars,
+  delay = 0,
 }: {
   title: string;
-  overallPct: number;
-  badgeColor: string;
-  shortStayPct: number;
-  longStayPct: number;
+  periodLabel?: string;
   bars: {
     name: string;
     short_stay: number;
@@ -313,86 +446,187 @@ function StackedSectionShortLong({
   }[];
   delay?: number;
 }) {
-  const chartData = bars.map((b) => ({
-    name: b.name,
-    short_stay: b.short_stay,
-    long_stay: b.long_stay,
-    total: b.total,
-    short_pct: b.short_stay_pct,
-    long_pct: b.long_stay_pct,
-  }));
+  const r25 =
+    bars.find((b) => String(b.name).includes("2025")) ??
+    bars.find((b) => /2025/i.test(String(b.name))) ??
+    bars[0];
+  const r26 =
+    bars.find((b) => String(b.name).includes("2026")) ??
+    bars.find((b) => /2026/i.test(String(b.name))) ??
+    bars[1];
 
-  const longColor = "#E4572E";
-  const shortColor = "#9CA3AF";
+  if (!r25 || !r26) {
+    return (
+      <div className="rc-card" style={{ ...cardStyle, animationDelay: `${delay}ms` }}>
+        <h3 style={cardHeaderStyle}>{title}</h3>
+        <p style={{ color: "#6B7280", fontSize: 13 }}>Not enough periods to show YoY.</p>
+      </div>
+    );
+  }
+
+  const s25 = Number(r25.short_stay) || 0;
+  const s26 = Number(r26.short_stay) || 0;
+  const l25 = Number(r25.long_stay) || 0;
+  const l26 = Number(r26.long_stay) || 0;
+  const t25 = Number(r25.total) || 0;
+  const t26 = Number(r26.total) || 0;
+
+  // Arc pills use revenue deltas (Apr'25 vs Apr'26). Sheet J-column "%" cells are often
+  // YoY *rates* or blanks — using them here produced 0% for Short/Long while bars showed real growth.
+  const gShort = yoyGrowthFromValues(s25, s26);
+  const gLong = yoyGrowthFromValues(l25, l26);
+  const gOverall = yoyGrowthFromValues(t25, t26);
+
+  const chartData = [
+    { segment: "Short-stay", april25: s25, april26: s26, growth_pct: gShort },
+    { segment: "Long-stay", april25: l25, april26: l26, growth_pct: gLong },
+    { segment: "Overall", april25: t25, april26: t26, growth_pct: gOverall },
+  ];
+
+  const periodLine =
+    (periodLabel && periodLabel.replace(/^YoY\s+Growth\s*/i, "").trim()) ||
+    periodLabel?.match(/\(([^)]+)\)/)?.[1] ||
+    periodLabel ||
+    null;
+
+  const tooltipFmt = (v: number | undefined, name: string) => [`${toL(Number(v) || 0)}`, name];
+
+  const barGreyApr25 = "#64748B";
+  /** April ’26 bar — matches brand orange (screenshot ref ~#F15A24). */
+  const orangeApr26 = "#F15A24";
+
+  const legendSwatch: React.CSSProperties = {
+    display: "inline-flex",
+    alignItems: "center",
+    gap: "8px",
+    fontSize: "12px",
+    fontWeight: 600,
+    color: "#4B5563",
+    letterSpacing: "0.01em",
+  };
 
   return (
     <div className="rc-card" style={{ ...cardStyle, animationDelay: `${delay}ms` }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "20px" }}>
-        <h3 style={cardHeaderStyle}>{title}</h3>
-        <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: "6px" }}>
-          <span style={{ fontSize: "11px", fontWeight: 600, color: "#6B7280", letterSpacing: "0.04em" }}>Growth rates</span>
-          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", background: "#F3F4F6", border: "1px solid #E5E7EB", borderRadius: "8px", padding: "4px 12px", minWidth: "78px" }}>
-              <span style={{ fontSize: "10px", fontWeight: 600, color: "#9CA3AF", textTransform: "uppercase", letterSpacing: "0.4px", textAlign: "center" }}>Short stay</span>
-              <span style={{ fontSize: "16px", fontWeight: 800, color: "#374151" }}>{pctPill(shortStayPct)}%</span>
-            </div>
-            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", background: "#FFF4F1", border: "1px solid #FECAB4", borderRadius: "8px", padding: "4px 12px", minWidth: "78px" }}>
-              <span style={{ fontSize: "10px", fontWeight: 600, color: "#E4572E", textTransform: "uppercase", letterSpacing: "0.4px", textAlign: "center" }}>Long stay</span>
-              <span style={{ fontSize: "16px", fontWeight: 800, color: longColor }}>{pctPill(longStayPct)}%</span>
-            </div>
-            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", background: "#F9FAFB", border: "1px solid #E5E7EB", borderRadius: "8px", padding: "4px 14px", minWidth: "72px" }}>
-              <span style={{ fontSize: "10px", fontWeight: 600, color: "#9CA3AF", textTransform: "uppercase", letterSpacing: "0.5px" }}>Overall</span>
-              <span style={{ fontSize: "16px", fontWeight: 800, color: badgeColor }}>{overallPct}%</span>
-            </div>
-          </div>
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "flex-start",
+          gap: "20px",
+          marginBottom: "20px",
+          flexWrap: "wrap",
+        }}
+      >
+        <div style={{ minWidth: 0 }}>
+          <h3 style={{ ...cardHeaderStyle, marginBottom: periodLine ? 8 : 0 }}>{title}</h3>
+          {periodLine ? (
+            <p
+              style={{
+                margin: 0,
+                fontSize: "14px",
+                fontWeight: 600,
+                color: "#6B7280",
+                letterSpacing: "0.02em",
+              }}
+            >
+              {periodLine}
+            </p>
+          ) : null}
+        </div>
+        <div style={{ display: "flex", alignItems: "center", gap: "22px", flexShrink: 0, paddingTop: "2px" }}>
+          <span style={legendSwatch}>
+            <span
+              style={{
+                width: 20,
+                height: 13,
+                borderRadius: 3,
+                background: barGreyApr25,
+                boxSizing: "border-box",
+              }}
+            />
+            April &apos;25
+          </span>
+          <span style={legendSwatch}>
+            <span
+              style={{
+                width: 20,
+                height: 13,
+                borderRadius: 3,
+                background: orangeApr26,
+                boxSizing: "border-box",
+              }}
+            />
+            April &apos;26
+          </span>
         </div>
       </div>
 
-      <div style={{ width: "100%", minWidth: 0, height: "300px" }}>
+      <div style={{ width: "100%", minWidth: 0, height: "380px" }}>
         <ResponsiveContainer width="100%" height="100%">
-          <BarChart data={chartData} margin={{ top: 8, right: 80, left: 0, bottom: 0 }} barSize={88}>
+          <BarChart
+            data={chartData}
+            margin={{ top: 76, right: 16, left: 8, bottom: 40 }}
+            barCategoryGap="22%"
+            barGap={8}
+          >
             <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E5E7EB" />
-            <XAxis dataKey="name" tick={{ fontSize: 13, fontWeight: 700, fill: "#374151" }} axisLine={false} tickLine={false} />
-            <YAxis hide />
-            <Bar dataKey="long_stay" stackId="a" fill={longColor} radius={[0, 0, 4, 4]} minPointSize={3} isAnimationActive animationDuration={800} animationEasing="ease-out">
-              <LabelList dataKey="long_stay" content={(props: any) => (
-                <PctLabel {...props} pct={chartData[props.index]?.long_pct} />
-              )} />
-              <LabelList dataKey="long_stay" content={(props: any) => (
-                <AmountLabel {...props} amount={toL(chartData[props.index]?.long_stay ?? 0)} />
-              )} />
+            <XAxis
+              dataKey="segment"
+              tick={(props: any) => <YoySegmentAxisTick {...props} />}
+              axisLine={{ stroke: "#E5E7EB" }}
+              tickLine={false}
+              interval={0}
+              height={36}
+            />
+            <YAxis
+              tick={{ fontSize: 11, fill: "#6B7280", fontWeight: 500 }}
+              axisLine={false}
+              tickLine={false}
+              tickFormatter={(v) => toL(Number(v))}
+              width={58}
+            />
+            <RechartsTooltip
+              cursor={{ fill: "#F9FAFB" }}
+              contentStyle={{
+                borderRadius: 10,
+                border: "1px solid #E5E7EB",
+                fontSize: 12,
+                boxShadow: "0 4px 12px rgba(0,0,0,0.06)",
+              }}
+              formatter={tooltipFmt as any}
+            />
+            <Bar
+              dataKey="april25"
+              name="April '25"
+              fill={barGreyApr25}
+              radius={[6, 6, 0, 0]}
+              maxBarSize={52}
+              isAnimationActive
+              animationDuration={800}
+              animationEasing="ease-out"
+            >
+              <LabelList dataKey="april25" position="top" content={BvaAmountAboveBar} />
             </Bar>
-            <Bar dataKey="short_stay" stackId="a" fill={shortColor} radius={[4, 4, 0, 0]} minPointSize={3} isAnimationActive animationDuration={800} animationEasing="ease-out">
-              <LabelList dataKey="short_stay" content={(props: any) => (
-                <PctLabel {...props} pct={chartData[props.index]?.short_pct} />
-              )} />
-              <LabelList dataKey="short_stay" content={(props: any) => (
-                <AmountLabel {...props} amount={toL(chartData[props.index]?.short_stay ?? 0)} />
-              )} />
+            <Bar
+              dataKey="april26"
+              name="April '26"
+              fill={orangeApr26}
+              radius={[6, 6, 0, 0]}
+              maxBarSize={52}
+              isAnimationActive
+              animationDuration={800}
+              animationEasing="ease-out"
+            >
+              <LabelList dataKey="april26" position="top" content={BvaAmountAboveBar} />
             </Bar>
+            <ManagedYoyGrowthArcs
+              data={chartData}
+              strokeColor={orangeApr26}
+              pillBorder="#FDBA74"
+              pillText="#9A3412"
+            />
           </BarChart>
         </ResponsiveContainer>
-      </div>
-
-      <div style={{ display: "flex", gap: "32px", marginTop: "16px", paddingTop: "16px", borderTop: "1px solid #E5E7EB", alignItems: "flex-end" }}>
-        {bars.map((b) => (
-          <div key={b.name}>
-            <div style={{ fontSize: "11px", color: "#9CA3AF", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em" }}>{b.name}</div>
-            <div style={{ fontSize: "20px", fontWeight: 800, color: "#111827" }}>{toL(b.total)}</div>
-          </div>
-        ))}
-        <div style={{ marginLeft: "auto", textAlign: "right" }}>
-          <div style={{ display: "flex", gap: "14px", justifyContent: "flex-end" }}>
-            <span style={{ display: "flex", alignItems: "center", gap: "5px", fontSize: "12px", color: "#4B5563" }}>
-              <span style={{ width: "10px", height: "10px", borderRadius: "2px", background: shortColor, display: "inline-block" }} />
-              Short stay
-            </span>
-            <span style={{ display: "flex", alignItems: "center", gap: "5px", fontSize: "12px", color: "#4B5563" }}>
-              <span style={{ width: "10px", height: "10px", borderRadius: "2px", background: longColor, display: "inline-block" }} />
-              Long stay
-            </span>
-          </div>
-        </div>
       </div>
     </div>
   );
@@ -401,17 +635,200 @@ function StackedSectionShortLong({
 /** Curved dashed growth arrows between consecutive bar tops, with a pill showing % delta.
  * Uses Recharts 3 hooks (`useXAxisScale`, `useYAxisScale`) to compute exact pixel positions
  * — `<Customized>` no longer forwards chart context in v3, so we read it from the store. */
-const GROWTH_ARROW_ID = "rc-growth-arrow-head";
+const MANAGED_YOY_ARROW_ID = "rc-managed-yoy-arrow";
 
-function FranchisedGrowthArcs({
+/** Curved dashed YoY arrows between April '25 and April '26 bar tops (grouped bar layout). */
+function ManagedYoyGrowthArcs({
   data,
-  accent = "#E4572E",
+  strokeColor = "#94A3B8",
+  pillBorder = "#CBD5E1",
+  pillText = "#334155",
 }: {
-  data: { name: string; total: number }[];
-  accent?: string;
+  data: { segment: string; april25: number; april26: number; growth_pct: number }[];
+  strokeColor?: string;
+  pillBorder?: string;
+  pillText?: string;
 }) {
+  const plot = usePlotArea();
   const xScale = useXAxisScale() as ((v: any, opts?: { position?: "start" | "middle" | "end" }) => number | undefined) | undefined;
   const yScale = useYAxisScale() as ((v: any) => number | undefined) | undefined;
+
+  if (!xScale || !yScale || !Array.isArray(data) || !data.length) return null;
+
+  const plotW = plot?.width ?? 380;
+  const band = plotW / Math.max(1, data.length);
+  const categoryInner = band * 0.72;
+  const estBarW = Math.min(52, Math.max(18, (categoryInner - 8) / 2));
+  const halfSpan = estBarW / 2 + 4;
+
+  const arcs: React.ReactNode[] = [];
+
+  data.forEach((row, i) => {
+    const xm = xScale(row.segment, { position: "middle" });
+    if (typeof xm !== "number") return;
+
+    const span = Math.max(24, Math.min(36, halfSpan));
+    const x1 = xm - span;
+    const x2 = xm + span;
+
+    const y1 = yScale(row.april25);
+    const y2 = yScale(row.april26);
+    if (typeof y1 !== "number" || typeof y2 !== "number") return;
+
+    const pct = Number(row.growth_pct) || 0;
+    const label = `${Math.round(pct)}%`;
+
+    const startX = x1;
+    const startY = y1 - 5;
+    const endX = x2;
+    const endY = y2 - 5;
+    const arcLift = 22;
+    const peakY = Math.min(startY, endY) - arcLift;
+    const ctrlX = (startX + endX) / 2;
+
+    const path = `M ${startX} ${startY} Q ${ctrlX} ${peakY} ${endX} ${endY - 2}`;
+
+    const pillW = Math.max(48, label.length * 8 + 16);
+    const pillH = 20;
+    const pillX = ctrlX - pillW / 2;
+    const pillY = peakY - pillH / 2;
+
+    arcs.push(
+      <g key={`managed-yoy-arc-${row.segment}-${i}`} pointerEvents="none">
+        <path
+          d={path}
+          stroke={strokeColor}
+          strokeWidth={1.15}
+          strokeDasharray="4 3.5"
+          fill="none"
+          strokeLinecap="round"
+          markerEnd={`url(#${MANAGED_YOY_ARROW_ID})`}
+        />
+        <g transform={`translate(${pillX} ${pillY})`}>
+          <rect
+            x={0}
+            y={0}
+            rx={pillH / 2}
+            ry={pillH / 2}
+            width={pillW}
+            height={pillH}
+            fill="#FFFFFF"
+            stroke={pillBorder}
+            strokeWidth={1}
+          />
+          <text
+            x={pillW / 2}
+            y={pillH / 2 + 4}
+            textAnchor="middle"
+            fontSize={11}
+            fontWeight={800}
+            fill={pillText}
+            style={{ fontVariantNumeric: "tabular-nums" }}
+          >
+            {label}
+          </text>
+        </g>
+      </g>
+    );
+  });
+
+  return (
+    <g pointerEvents="none">
+      <defs>
+        <marker
+          id={MANAGED_YOY_ARROW_ID}
+          viewBox="0 0 10 10"
+          refX={7}
+          refY={5}
+          markerWidth={5}
+          markerHeight={5}
+          orient="auto-start-reverse"
+        >
+          <path d="M 0 0 L 10 5 L 0 10 Z" fill={strokeColor} />
+        </marker>
+      </defs>
+      {arcs}
+    </g>
+  );
+}
+
+const FRANCHISED_ORANGE = "#F97316";
+const FRANCHISED_ORANGE_DEEP = "#EA580C";
+
+/** Currency label above franchised revenue bars (tuned for orange bars + dashboard density). */
+function franchisedBarAmountLabel(v: number) {
+  const lakhs = v / 100_000;
+  return lakhs > 0 && lakhs < 80 ? `₹${lakhs.toFixed(2)}L` : toL(v);
+}
+
+function FranchisedBarValueLabel(props: any) {
+  const { x, y, width, value } = props;
+  const v = Number(value);
+  if (!Number.isFinite(v) || v <= 0) return null;
+  const cx = x + width / 2;
+  const ty = (typeof y === "number" ? y : 0) - 22;
+  return (
+    <text
+      x={cx}
+      y={ty}
+      textAnchor="middle"
+      dominantBaseline="auto"
+      style={{
+        fontSize: 13,
+        fontWeight: 800,
+        fill: "#0F172A",
+        fontVariantNumeric: "tabular-nums",
+        letterSpacing: "-0.03em",
+      }}
+    >
+      {franchisedBarAmountLabel(v)}
+    </text>
+  );
+}
+
+/** Small filled arrowhead drawn in user space (SVG markers were sub-pixel and disappeared). */
+function franchisedArcArrowHead(
+  tipX: number,
+  tipY: number,
+  dirX: number,
+  dirY: number,
+  fill: string,
+  key: string,
+) {
+  const len = Math.hypot(dirX, dirY) || 1;
+  const ux = dirX / len;
+  const uy = dirY / len;
+  const al = 5.2;
+  const aw = 2.6;
+  const bx = tipX - ux * al;
+  const by = tipY - uy * al;
+  const px = -uy;
+  const py = ux;
+  const p1x = bx + px * aw;
+  const p1y = by + py * aw;
+  const p2x = bx - px * aw;
+  const p2y = by - py * aw;
+  return <polygon key={key} points={`${tipX},${tipY} ${p1x},${p1y} ${p2x},${p2y}`} fill={fill} fillOpacity={0.95} stroke="none" />;
+}
+
+/** Curved MoM arrows between consecutive month bar tops (total revenue). */
+function FranchisedGrowthArcs({
+  data,
+  strokeColor = FRANCHISED_ORANGE,
+  pillBorder = "#FBBF24",
+  pillText = "#92400E",
+  pillFill = "#FFFBEB",
+  yAxisId = "left",
+}: {
+  data: { name: string; total: number }[];
+  strokeColor?: string;
+  pillBorder?: string;
+  pillText?: string;
+  pillFill?: string;
+  yAxisId?: string | number;
+}) {
+  const xScale = useXAxisScale() as ((v: any, opts?: { position?: "start" | "middle" | "end" }) => number | undefined) | undefined;
+  const yScale = useYAxisScale(yAxisId) as ((v: any) => number | undefined) | undefined;
 
   if (!xScale || !yScale || !Array.isArray(data) || data.length < 2) return null;
 
@@ -435,31 +852,55 @@ function FranchisedGrowthArcs({
     const sign = pct >= 0 ? "+" : "";
     const label = `${sign}${pct.toFixed(1)}%`;
 
+    const inset = 4;
     const startX = a.cx;
-    const startY = a.cy - 6;
+    const startY = a.cy + inset;
     const endX = b.cx;
-    const endY = b.cy - 6;
-    const peakY = Math.min(startY, endY) - 70;
-    const ctrlX = (startX + endX) / 2;
+    const endY = b.cy + inset;
+    const dx = endX - startX;
+    const lift = 18;
+    const c1x = startX + dx * 0.22;
+    const c1y = startY - lift * 0.42;
+    const c2x = startX + dx * 0.78;
+    const c2y = endY - lift * 0.42;
 
-    const path = `M ${startX} ${startY} Q ${ctrlX} ${peakY} ${endX} ${endY - 4}`;
+    const path = `M ${startX} ${startY} C ${c1x} ${c1y} ${c2x} ${c2y} ${endX} ${endY}`;
+    const tdx = 3 * (endX - c2x);
+    const tdy = 3 * (endY - c2y);
+    const tl = Math.hypot(tdx, tdy) || 1;
+    const uxf = tdx / tl;
+    const uyf = tdy / tl;
+    const tipX = endX + uxf * 1.4;
+    const tipY = endY + uyf * 1.4;
 
-    const pillW = Math.max(58, label.length * 8 + 20);
-    const pillH = 24;
-    const pillX = ctrlX - pillW / 2;
-    const pillY = peakY - 4;
+    const pillW = Math.max(48, label.length * 6.5 + 16);
+    const pillH = 18;
+    const midBt =
+      0.125 * startX +
+      0.375 * c1x +
+      0.375 * c2x +
+      0.125 * endX;
+    const midBy =
+      0.125 * startY +
+      0.375 * c1y +
+      0.375 * c2y +
+      0.125 * endY;
+    const pillX = midBt - pillW / 2;
+    const pillY = midBy - pillH / 2 - 5;
 
     arcs.push(
       <g key={`growth-arc-${i}`} pointerEvents="none">
         <path
           d={path}
-          stroke={accent}
-          strokeWidth={1.8}
-          strokeDasharray="6 4"
+          stroke={strokeColor}
+          strokeOpacity={0.78}
+          strokeWidth={0.95}
+          strokeDasharray="3.5 3"
           fill="none"
           strokeLinecap="round"
-          markerEnd={`url(#${GROWTH_ARROW_ID})`}
+          strokeLinejoin="round"
         />
+        {franchisedArcArrowHead(tipX, tipY, uxf, uyf, strokeColor, `ah-${i}`)}
         <g transform={`translate(${pillX} ${pillY})`}>
           <rect
             x={0}
@@ -468,18 +909,18 @@ function FranchisedGrowthArcs({
             ry={pillH / 2}
             width={pillW}
             height={pillH}
-            fill="#FFFFFF"
-            stroke={accent}
-            strokeWidth={1.2}
+            fill={pillFill}
+            stroke={pillBorder}
+            strokeWidth={0.85}
           />
           <text
             x={pillW / 2}
-            y={pillH / 2 + 4}
+            y={pillH / 2 + 2.5}
             textAnchor="middle"
-            fontSize={12}
-            fontWeight={800}
-            fill={accent}
-            style={{ fontVariantNumeric: "tabular-nums" }}
+            fontSize={9}
+            fontWeight={700}
+            fill={pillText}
+            style={{ fontVariantNumeric: "tabular-nums", letterSpacing: "-0.02em" }}
           >
             {label}
           </text>
@@ -488,34 +929,61 @@ function FranchisedGrowthArcs({
     );
   }
 
+  return <g pointerEvents="none">{arcs}</g>;
+}
+
+/** Two-line X tick: month label + % of contribution from the Revenue sheet. */
+function FranchisedXAxisTick(
+  props: {
+    x?: number;
+    y?: number;
+    payload?: unknown;
+    index?: number;
+    chartData: { name: string; contribution_pct?: number | null }[];
+  } & Record<string, unknown>,
+) {
+  const { x = 0, y = 0, payload, index, chartData } = props;
+  const p = payload as { value?: unknown; payload?: { name?: string } } | string | number | undefined;
+  let fromPayload = "";
+  if (typeof p === "string" || typeof p === "number") fromPayload = String(p);
+  else if (p && typeof p === "object") {
+    if (p.value != null) fromPayload = String(p.value);
+    else if (p.payload != null && typeof p.payload === "object" && "name" in p.payload)
+      fromPayload = String((p.payload as { name?: string }).name ?? "");
+  }
+  const label =
+    fromPayload ||
+    (typeof index === "number" && chartData[index] ? String(chartData[index].name) : "");
+  const row =
+    typeof index === "number" && chartData[index]
+      ? chartData[index]
+      : chartData.find((d) => d.name === label);
+  const c = row?.contribution_pct;
+  const show = typeof c === "number" && Number.isFinite(c);
   return (
-    <g pointerEvents="none">
-      <defs>
-        <marker
-          id={GROWTH_ARROW_ID}
-          viewBox="0 0 10 10"
-          refX={8}
-          refY={5}
-          markerWidth={7}
-          markerHeight={7}
-          orient="auto-start-reverse"
-        >
-          <path d="M 0 0 L 10 5 L 0 10 Z" fill={accent} />
-        </marker>
-      </defs>
-      {arcs}
+    <g transform={`translate(${x},${y})`}>
+      <text x={0} y={0} dy={12} textAnchor="middle" fill="#334155" fontSize={12} fontWeight={600}>
+        {label}
+      </text>
+      {show ? (
+        <text x={0} y={0} dy={30} textAnchor="middle" fill="#64748B" fontSize={11} fontWeight={600}>
+          {c}% of contribution
+        </text>
+      ) : null}
     </g>
   );
 }
 
-/** Section 3 — Franchised MoM (Open vs others), three months */
+/** Section 3 — Franchised MoM: total revenue bars + MoM arcs (matches YoY managed card chrome). */
 function FranchisedMoMSection({
-  title, openPct, othersPct, totalPct, bars, delay = 0,
+  title,
+  subtitle,
+  bars,
+  delay = 0,
 }: {
   title: string;
-  openPct: number;
-  othersPct: number;
-  totalPct: number;
+  /** Shown under the title, same role as YoY period line (e.g. reporting window). */
+  subtitle?: string;
   bars: {
     name: string;
     fr_open: number;
@@ -523,107 +991,216 @@ function FranchisedMoMSection({
     total: number;
     fr_open_pct: number;
     fr_others_pct: number;
+    contribution_pct?: number | null;
   }[];
   delay?: number;
 }) {
-  // The franchised MoM block always shows three months: Feb / March / April (part).
-  // If the API returns YoY-style names (e.g. "March 25" / "March 26") we override them
-  // so the chart never shows wrong x-axis labels even if the backend points to a
-  // workbook variant where the month header row is corrupted.
-  const FRANCHISED_MONTHS = ["Feb", "March", "April (part)"] as const;
+  const FRANCHISED_MONTHS = ["Feb '26", "March '26", "April '26"] as const;
   const safeBars = bars.slice(0, 3);
-  const chartData = safeBars.map((b, i) => ({
-    name: FRANCHISED_MONTHS[i] ?? b.name,
-    fr_open: b.fr_open,
-    fr_others: b.fr_others,
-    total: b.total,
-    fr_open_pct: b.fr_open_pct,
-    fr_others_pct: b.fr_others_pct,
-  }));
 
-  const pill = (label: string, value: unknown, accent: string, bg: string, border: string) => {
-    const text = momPillText(value);
-    const n = Number(value);
-    const color =
-      text === "—" ? "#6B7280" : !Number.isNaN(n) && n >= 0 ? "#16A34A" : "#DC2626";
-    const arrow = text === "—" ? "" : !Number.isNaN(n) && n >= 0 ? "↗ " : "↘ ";
-    return (
-      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", background: bg, border, borderRadius: "8px", padding: "4px 12px", minWidth: "76px" }}>
-        <span style={{ fontSize: "10px", fontWeight: 600, color: accent, textTransform: "uppercase", letterSpacing: "0.4px", textAlign: "center" }}>{label}</span>
-        <span style={{ fontSize: "16px", fontWeight: 800, color }}>
-          {arrow}
-          {text}
-        </span>
-      </div>
-    );
+  const finiteMoney = (n: unknown) => {
+    const x = Number(n);
+    if (!Number.isFinite(x)) return 0;
+    return Math.min(Math.max(x, 0), 1e15);
+  };
+  const finitePct = (n: unknown) => {
+    const x = Number(n);
+    if (!Number.isFinite(x)) return 0;
+    return Math.min(Math.max(x, 0), 100);
+  };
+
+  const chartData = safeBars.map((b, i) => {
+    const cp = b.contribution_pct;
+    const contribution_pct =
+      typeof cp === "number" && Number.isFinite(cp) ? cp : cp != null ? Number(cp) : null;
+    return {
+      name: FRANCHISED_MONTHS[i] ?? String(b.name ?? ""),
+      total: finiteMoney(b.total),
+      fr_open_pct: finitePct(b.fr_open_pct),
+      contribution_pct:
+        contribution_pct != null && Number.isFinite(contribution_pct) ? contribution_pct : null,
+    };
+  });
+
+  const sub = subtitle?.trim() ?? "";
+  const periodLine =
+    sub && sub.toLowerCase() !== title.trim().toLowerCase()
+      ? sub
+      : "Franchised revenue · Feb – April '26";
+
+  const L_15 = 15 * 100_000;
+  const maxTotal = Math.max(...chartData.map((d) => d.total), 1);
+  const leftAxisMax = Math.max(L_15, Math.ceil(maxTotal / L_15) * L_15);
+
+  const franchisedTitleStyle: React.CSSProperties = {
+    ...cardHeaderStyle,
+    fontSize: "18px",
+    fontWeight: 700,
+    letterSpacing: "-0.02em",
+    color: "#0F172A",
+    paddingBottom: "6px",
+    marginBottom: periodLine ? 6 : 0,
+  };
+
+  const legendChip: React.CSSProperties = {
+    display: "inline-flex",
+    alignItems: "center",
+    gap: "10px",
+    fontSize: "12px",
+    fontWeight: 600,
+    color: "#475569",
+    letterSpacing: "0.01em",
+    padding: "7px 14px",
+    borderRadius: "999px",
+    background: "#F8FAFC",
+    border: "1px solid #EEF2F6",
+  };
+
+  const tooltipFmt = (v: number | undefined, name: string) => {
+    if (name === "total" || name === "Total franchised") {
+      const n = Number(v) || 0;
+      return [franchisedBarAmountLabel(n), "Total franchised"];
+    }
+    return [`${v}`, name];
+  };
+
+  const franchisedCardSurface: React.CSSProperties = {
+    ...cardStyle,
+    borderRadius: "14px",
+    padding: "28px 32px 32px",
+    border: "1px solid #E8ECF0",
+    boxShadow: "0 1px 2px rgba(15, 23, 42, 0.04), 0 12px 32px -8px rgba(15, 23, 42, 0.08)",
+    animationDelay: `${delay}ms`,
   };
 
   return (
-    <div className="rc-card" style={{ ...cardStyle, animationDelay: `${delay}ms` }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "20px" }}>
-        <h3 style={cardHeaderStyle}>{title}</h3>
-        <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: "6px" }}>
-          <span style={{ fontSize: "11px", fontWeight: 600, color: "#6B7280", letterSpacing: "0.04em" }}>Growth rates</span>
-          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-            {pill("Open", openPct, "#374151", "#F3F4F6", "1px solid #E5E7EB")}
-            {pill("Others", othersPct, "#E4572E", "#FFF4F1", "1px solid #FECAB4")}
-            {pill("Overall", totalPct, "#16A34A", "#F0FDF4", "1px solid #BBF7D0")}
-          </div>
+    <div className="rc-card rc-card-franchised" style={franchisedCardSurface}>
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "flex-start",
+          gap: "24px",
+          marginBottom: "0",
+          flexWrap: "wrap",
+          paddingBottom: "20px",
+          borderBottom: "1px solid #EEF2F6",
+        }}
+      >
+        <div style={{ minWidth: 0, flex: "1 1 220px" }}>
+          <h3 style={franchisedTitleStyle}>{title}</h3>
+          {periodLine ? (
+            <p
+              style={{
+                margin: 0,
+                fontSize: "13px",
+                fontWeight: 500,
+                color: "#64748B",
+                letterSpacing: "0.01em",
+                lineHeight: 1.45,
+                maxWidth: "520px",
+              }}
+            >
+              {periodLine}
+            </p>
+          ) : null}
+        </div>
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: "12px",
+            flexShrink: 0,
+            flexWrap: "wrap",
+            paddingTop: "4px",
+          }}
+        >
+          <span style={legendChip}>
+            <span
+              style={{
+                width: 14,
+                height: 14,
+                borderRadius: 4,
+                background: `linear-gradient(180deg, ${FRANCHISED_ORANGE} 0%, ${FRANCHISED_ORANGE_DEEP} 100%)`,
+                boxShadow: "0 1px 2px rgba(234, 88, 12, 0.35)",
+                flexShrink: 0,
+              }}
+            />
+            Total franchised
+          </span>
         </div>
       </div>
 
-      <div style={{ width: "100%", minWidth: 0, height: 340, minHeight: 340, position: "relative" }}>
-        <ResponsiveContainer width="100%" height={340} minHeight={340} minWidth={0}>
-          <BarChart
-            key={chartData.map((d) => `${d.name}:${d.fr_open}:${d.fr_others}`).join("|")}
+      <div
+        style={{
+          marginTop: "20px",
+          width: "100%",
+          minWidth: 0,
+          height: "400px",
+          padding: "12px 4px 4px",
+          borderRadius: "12px",
+          background: "linear-gradient(180deg, #FAFBFC 0%, #FFFFFF 48%)",
+          border: "1px solid #F1F5F9",
+        }}
+      >
+        <ResponsiveContainer width="100%" height="100%">
+          <ComposedChart
             data={chartData}
-            margin={{ top: 96, right: 80, left: 0, bottom: 0 }}
-            barSize={44}
+            margin={{ top: 84, right: 8, left: 0, bottom: 64 }}
+            barCategoryGap="26%"
           >
-            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E5E7EB" />
-            <XAxis dataKey="name" tick={{ fontSize: 11, fontWeight: 700, fill: "#374151" }} axisLine={false} tickLine={false} interval={0} />
-            <YAxis hide />
-            <Bar dataKey="fr_others" stackId="f" fill="#E4572E" radius={[0, 0, 4, 4]} minPointSize={2} isAnimationActive animationDuration={800} animationEasing="ease-out">
-              <LabelList dataKey="fr_others" content={(props: any) => (
-                <PctLabel {...props} pct={chartData[props.index]?.fr_others_pct} />
-              )} />
-              <LabelList dataKey="fr_others" content={(props: any) => (
-                <AmountLabel {...props} amount={toL(chartData[props.index]?.fr_others ?? 0)} />
-              )} />
+            <CartesianGrid strokeDasharray="4 4" vertical={false} stroke="#E2E8F0" />
+            <XAxis
+              dataKey="name"
+              tick={(props: any) => <FranchisedXAxisTick {...props} chartData={chartData} />}
+              tickMargin={6}
+              axisLine={false}
+              tickLine={false}
+              interval={0}
+              height={72}
+            />
+            <YAxis
+              yAxisId="left"
+              domain={[0, leftAxisMax]}
+              tick={{ fontSize: 11, fill: "#64748B", fontWeight: 600 }}
+              axisLine={false}
+              tickLine={false}
+              tickFormatter={(v) => toL(Number(v))}
+              width={54}
+            />
+            <RechartsTooltip
+              cursor={false}
+              contentStyle={{
+                borderRadius: 10,
+                border: "1px solid #E2E8F0",
+                fontSize: 12,
+                boxShadow: "0 10px 40px -12px rgba(15, 23, 42, 0.15)",
+                padding: "10px 14px",
+              }}
+              labelStyle={{ fontWeight: 700, color: "#0F172A", marginBottom: 6 }}
+              formatter={tooltipFmt as any}
+            />
+            <Bar
+              yAxisId="left"
+              dataKey="total"
+              name="Total franchised"
+              fill={FRANCHISED_ORANGE}
+              radius={[10, 10, 0, 0]}
+              maxBarSize={62}
+              isAnimationActive={false}
+            >
+              <LabelList dataKey="total" position="top" content={FranchisedBarValueLabel} />
             </Bar>
-            <Bar dataKey="fr_open" stackId="f" fill="#64748B" radius={[4, 4, 0, 0]} minPointSize={2} isAnimationActive animationDuration={800} animationEasing="ease-out">
-              <LabelList dataKey="fr_open" content={(props: any) => (
-                <FrOpenSideLabel
-                  {...props}
-                  amount={toLPrecise(chartData[props.index]?.fr_open ?? 0)}
-                  pct={chartData[props.index]?.fr_open_pct}
-                />
-              )} />
-            </Bar>
-            <FranchisedGrowthArcs data={chartData} />
-          </BarChart>
+            <FranchisedGrowthArcs
+              data={chartData}
+              strokeColor={FRANCHISED_ORANGE}
+              pillBorder="#F59E0B"
+              pillText="#92400E"
+              pillFill="#FFFBEB"
+              yAxisId="left"
+            />
+          </ComposedChart>
         </ResponsiveContainer>
-      </div>
-
-      <div style={{ display: "flex", gap: "24px", marginTop: "16px", paddingTop: "16px", borderTop: "1px solid #E5E7EB", alignItems: "flex-end", flexWrap: "wrap" }}>
-        {chartData.map((b) => (
-          <div key={b.name}>
-            <div style={{ fontSize: "11px", color: "#9CA3AF", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em" }}>{b.name}</div>
-            <div style={{ fontSize: "20px", fontWeight: 800, color: "#111827" }}>{toL(b.total)}</div>
-          </div>
-        ))}
-        <div style={{ marginLeft: "auto", textAlign: "right" }}>
-          <div style={{ display: "flex", gap: "14px", justifyContent: "flex-end" }}>
-            <span style={{ display: "flex", alignItems: "center", gap: "5px", fontSize: "12px", color: "#4B5563" }}>
-              <span style={{ width: "10px", height: "10px", borderRadius: "2px", background: "#64748B", display: "inline-block" }} />
-              Open
-            </span>
-            <span style={{ display: "flex", alignItems: "center", gap: "5px", fontSize: "12px", color: "#4B5563" }}>
-              <span style={{ width: "10px", height: "10px", borderRadius: "2px", background: "#E4572E", display: "inline-block" }} />
-              Others
-            </span>
-          </div>
-        </div>
       </div>
     </div>
   );
@@ -640,8 +1217,12 @@ export default function RevenueCompositionPage() {
   }, []);
 
   useEffect(() => {
-    load();
-    const t = setInterval(load, REFRESH);
+    queueMicrotask(() => {
+      void load();
+    });
+    const t = setInterval(() => {
+      void load();
+    }, REFRESH);
     return () => clearInterval(t);
   }, [load]);
 
@@ -655,18 +1236,17 @@ export default function RevenueCompositionPage() {
           <strong>Local:</strong> run FastAPI with{" "}
           <code style={{ background: "#F3F4F6", padding: "2px 6px", borderRadius: "4px" }}>uvicorn</code> on port 8000 (the Next app proxies{" "}
           <code style={{ background: "#F3F4F6", padding: "2px 6px", borderRadius: "4px" }}>/api/*</code> there).{" "}
-          <strong>Vercel + Render:</strong> in the Vercel project set environment variable{" "}
+          <strong>Vercel + Render:</strong> set{" "}
+          <code style={{ background: "#F3F4F6", padding: "2px 6px", borderRadius: "4px" }}>NEXT_PUBLIC_API_URL</code> or{" "}
           <code style={{ background: "#F3F4F6", padding: "2px 6px", borderRadius: "4px" }}>BACKEND_URL</code> to your public API base (e.g.{" "}
-          <code style={{ background: "#F3F4F6", padding: "2px 6px", borderRadius: "4px" }}>https://your-api.onrender.com</code>, no trailing slash), then redeploy.{" "}
-          Alternatively set{" "}
-          <code style={{ background: "#F3F4F6", padding: "2px 6px", borderRadius: "4px" }}>NEXT_PUBLIC_API_URL</code> to that same origin so the browser calls the API directly.
+          <code style={{ background: "#F3F4F6", padding: "2px 6px", borderRadius: "4px" }}>https://your-api.onrender.com</code> — use <strong>https</strong>, no trailing slash — then redeploy. Either variable works; the app proxy also reads{" "}
+          <code style={{ background: "#F3F4F6", padding: "2px 6px", borderRadius: "4px" }}>NEXT_PUBLIC_API_URL</code>.
         </p>
       </div>
     );
 
   const s2 = data.section2;
   const s3 = data.section3;
-  const yoyBadge = s2.yoy_pct >= 0 ? "#16a34a" : "#dc2626";
 
   return (
     <div style={pageStyle}>
@@ -685,6 +1265,14 @@ export default function RevenueCompositionPage() {
           transform: translateY(-2px);
           transition: box-shadow 0.25s ease, transform 0.25s ease;
         }
+        .rc-card-franchised {
+          font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+          -webkit-font-smoothing: antialiased;
+          -moz-osx-font-smoothing: grayscale;
+        }
+        .rc-card-franchised:hover {
+          box-shadow: 0 2px 4px rgba(15, 23, 42, 0.04), 0 16px 40px -10px rgba(15, 23, 42, 0.1) !important;
+        }
       `}</style>
 
       <div
@@ -692,17 +1280,17 @@ export default function RevenueCompositionPage() {
         style={{ marginBottom: "32px", borderBottom: "1px solid #E5E7EB", paddingBottom: "16px" }}
       >
         <h1 style={{ fontSize: "26px", fontWeight: 700, color: "#111827", margin: "0 0 4px 0" }}>
-          Revenue Composition — 1 April&apos;26 to 24 April&apos;26
+          Revenue Composition — 1 April&apos;26 to 30 April&apos;26
         </h1>
-        <p style={{ margin: 0, fontSize: "13px", color: "#9CA3AF", fontWeight: 500 }}>1 April&apos;26 to 24 April&apos;26 · Same period comparison</p>
+        <p style={{ margin: 0, fontSize: "13px", color: "#9CA3AF", fontWeight: 500 }}>1 April&apos;26 to 30 April&apos;26 · Same period comparison</p>
       </div>
 
       <StackedSectionOnlineOffline
-        title="Target vs Actual - Managed properties"
-        overallPct={data.section1.achievement_pct}
-        badgeColor={data.section1.achievement_pct >= 90 ? "#16a34a" : data.section1.achievement_pct >= 75 ? "#d97706" : "#dc2626"}
-        onlinePct={data.section1.achievement_online_pct}
-        offlinePct={data.section1.achievement_offline_pct}
+        title="Budget vs Actual - Managed properties"
+        periodLabel={data.section1.label}
+        achievementOnlinePct={data.section1.achievement_online_pct}
+        achievementOfflinePct={data.section1.achievement_offline_pct}
+        achievementOverallPct={data.section1.achievement_pct}
         bars={data.section1.bars}
         delay={120}
       />
@@ -710,10 +1298,7 @@ export default function RevenueCompositionPage() {
 
       <StackedSectionShortLong
         title="YoY Growth - Managed properties"
-        overallPct={s2.yoy_pct}
-        badgeColor={yoyBadge}
-        shortStayPct={s2.yoy_short_stay_pct}
-        longStayPct={s2.yoy_long_stay_pct}
+        periodLabel={s2.label}
         bars={s2.bars}
         delay={260}
       />
@@ -722,9 +1307,7 @@ export default function RevenueCompositionPage() {
       {s3?.bars?.length ? (
         <FranchisedMoMSection
           title="MoM Growth - Franchised properties"
-          openPct={s3.mom_open_pct ?? 0}
-          othersPct={s3.mom_others_pct ?? 0}
-          totalPct={s3.mom_total_pct ?? 0}
+          subtitle={s3.label}
           bars={s3.bars}
           delay={400}
         />

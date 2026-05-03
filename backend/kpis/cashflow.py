@@ -1,18 +1,18 @@
 """
-KPI 4: Cashflow — March
-Reads live from Excel (cashflow sheet), Weekly update - 27.04.2024 v2.xlsx
+KPI 4: Cashflow — April
+Reads live from Excel (cashflow sheet), Weekly update - 30.04.2024 v3.xlsx
 
 cashflow sheet layout (1-indexed cols):
-  col2 = label | col3 = Target | col4..7 = W1..W4 | col8 = Total | col9 = Expected
+  col2 = label | col3 = Target | col4..8 = W1..W5 | col9 = Total | col10 = Expected
   R8  : TA Fees
   R9  : Management Fees
   R10 : Profit Incentive
-  R12 : Outflow total (col9 fallback col8)
-  R15 : Current Bank Balance (col9 fallback col8)
+  R12 : Outflow total (col10 fallback col9)
+  R15 : Current Bank Balance (col10 fallback col9)
   R16 : Coliving Operations (col3)
   R17 : Coliving (col3)
   R18 : VARS (col3)
-  R20 : Closing Cash (col9 fallback col8)
+  R20 : Closing Cash (col10 fallback col9)
 """
 import os
 import openpyxl
@@ -41,9 +41,9 @@ def _read():
         return 0.0
 
     def inflow_row(row: int, label: str) -> dict:
-        w1, w2, w3, w4 = v(row, 4), v(row, 5), v(row, 6), v(row, 7)
-        total_received = v_first(row, [8]) or (w1 + w2 + w3 + w4)
-        expected = v_first(row, [9, 8])
+        w1, w2, w3, w4, w5 = v(row, 4), v(row, 5), v(row, 6), v(row, 7), v(row, 8)
+        total_received = v_first(row, [9]) or (w1 + w2 + w3 + w4 + w5)
+        expected = v_first(row, [10, 9])
         return {
             "type": label,
             "target": v(row, 3),
@@ -51,6 +51,7 @@ def _read():
             "w2": w2,
             "w3": w3,
             "w4": w4,
+            "w5": w5,
             "total_received": total_received,
             "expected": expected,
         }
@@ -64,9 +65,9 @@ def _read():
     for inf in inflows:
         inf["received"] = inf["total_received"]
 
-    total_outflow    = v_first(12, [9, 8])   # Outflow row
-    current_balance  = v_first(15, [9, 8])   # Current bank balance
-    closing_balance  = v_first(20, [9, 8])   # Closing Cash
+    total_outflow    = v_first(12, [10, 9])   # Outflow row
+    current_balance  = v_first(15, [10, 9])   # Current bank balance
+    closing_balance  = v_first(20, [10, 9])   # Closing Cash
 
     account_balance = [
         {"account": "Coliving Operations", "amount": v(16, 3)},
@@ -94,6 +95,7 @@ def get_cashflow() -> dict:
             "w2":       sum(i['w2']       for i in inflows),
             "w3":       sum(i['w3']       for i in inflows),
             "w4":       sum(i['w4']       for i in inflows),
+            "w5":       sum(i.get('w5', 0) for i in inflows),
             "total_received": sum(i['total_received'] for i in inflows),
             "expected": sum(i['expected'] for i in inflows),
         },
