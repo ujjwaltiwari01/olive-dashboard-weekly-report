@@ -1,30 +1,29 @@
 """
 Excel Parser — reads the CFO weekly workbook
-`Weekly update - 30.04.2024 v3.xlsx` (multi-sheet).
+`Weekly update - 08.05.2026 v1.xlsx` (multi-sheet).
 
 Production (Railway, Docker): set OLIVE_WEEKLY_EXCEL_PATH or EXCEL_PATH to an absolute path
-where that workbook is stored (volume mount, build artifact, etc.). If unset, the file
-next to the repo root is used: Weekly update - 30.04.2024 v3.xlsx
+for this exact workbook name. If unset, the file next to the repo root is used:
+Weekly update - 08.05.2026 v1.xlsx
 """
 import os
-import time
-from typing import Any
+import threading
 import openpyxl
 import pandas as pd
 
 # Canonical weekly workbook for this dashboard (repo root). All KPI readers use EXCEL_PATH.
 # Override only via OLIVE_WEEKLY_EXCEL_PATH / EXCEL_PATH — do not hardcode alternate .xlsx names in KPI modules.
-WEEKLY_WORKBOOK_FILENAME = "Weekly update - 30.04.2024 v3.xlsx"
+WEEKLY_WORKBOOK_FILENAME = "Weekly update - 08.05.2026 v1.xlsx"
 _DEFAULT_WORKBOOK = WEEKLY_WORKBOOK_FILENAME
 
 
 def resolve_excel_path() -> str:
     """Resolve the canonical workbook path.
 
-    Default: `<repo-root>/Weekly update - 30.04.2024 v3.xlsx`.
+    Default: `<repo-root>/Weekly update - 08.05.2026 v1.xlsx`.
     Env overrides (`OLIVE_WEEKLY_EXCEL_PATH`, `EXCEL_PATH`) are honoured **only** if they
-    point at a file that exists. Any stale path (e.g. an old shell still exporting a v6
-    file) is ignored, so the dashboard cannot silently load the wrong workbook.
+    point at this exact workbook name. Any stale path to an older weekly workbook is
+    ignored, so the dashboard cannot silently load the wrong data.
     """
     here = os.path.dirname(os.path.abspath(__file__))
     default_path = os.path.abspath(os.path.join(here, "..", _DEFAULT_WORKBOOK))
@@ -34,7 +33,7 @@ def resolve_excel_path() -> str:
         if not raw:
             continue
         candidate = os.path.abspath(os.path.expanduser(raw))
-        if os.path.isfile(candidate):
+        if os.path.isfile(candidate) and os.path.basename(candidate) == WEEKLY_WORKBOOK_FILENAME:
             return candidate
     return default_path
 
@@ -60,38 +59,63 @@ def excel_workbook_missing_message() -> str:
     )
 
 
-_cache: dict[str, Any] = {}
-_cache_mtime: float = 0.0
+# One parsed workbook in memory per file mtime — avoids reopening the .xlsx on every KPI call
+# (previously each `get_sheet_values` did a full `load_workbook`, which is very slow).
+_wb_lock = threading.RLock()
+_workbook_mtime: float | None = None
+_workbook: openpyxl.Workbook | None = None
+_sheet_rows_cache: dict[str, list[list]] = {}
 
 
-def _get_workbook(data_only: bool = True) -> openpyxl.Workbook:
-    return openpyxl.load_workbook(EXCEL_PATH, data_only=data_only)
+def shared_workbook() -> openpyxl.Workbook:
+    """Return the shared workbook (data_only). Reloads only when `EXCEL_PATH` file mtime changes.
+
+    Callers must not call `.close()` on the returned object; the cache owns the lifecycle.
+    """
+    if not excel_file_available():
+        raise FileNotFoundError(excel_workbook_missing_message())
+    with _wb_lock:
+        _ensure_workbook_loaded()
+        assert _workbook is not None
+        return _workbook
 
 
-def _should_reload() -> bool:
-    global _cache_mtime
-    try:
-        mtime = os.path.getmtime(EXCEL_PATH)
-        if mtime != _cache_mtime:
-            _cache_mtime = mtime
-            return True
-        return False
-    except Exception:
-        return True
+def _ensure_workbook_loaded() -> None:
+    global _workbook_mtime, _workbook, _sheet_rows_cache
+    with _wb_lock:
+        try:
+            mtime = os.path.getmtime(EXCEL_PATH)
+        except OSError:
+            mtime = 0.0
+        if _workbook is not None and _workbook_mtime == mtime:
+            return
+        if _workbook is not None:
+            try:
+                _workbook.close()
+            except Exception:
+                pass
+            _workbook = None
+        _sheet_rows_cache.clear()
+        _workbook = openpyxl.load_workbook(EXCEL_PATH, data_only=True)
+        _workbook_mtime = mtime
 
 
 def get_sheet_values(sheet_name: str) -> list[list]:
-    """Return all rows (as list of values) from a given sheet."""
+    """Return all rows (as list of values) from a given sheet (cached per sheet until file changes)."""
     if not excel_file_available():
         return []
-    wb = _get_workbook(data_only=True)
-    if sheet_name not in wb.sheetnames:
-        return []
-    ws = wb[sheet_name]
-    rows = []
-    for row in ws.iter_rows(values_only=True):
-        rows.append(list(row))
-    return rows
+    _ensure_workbook_loaded()
+    assert _workbook is not None
+    with _wb_lock:
+        if sheet_name in _sheet_rows_cache:
+            return _sheet_rows_cache[sheet_name]
+        if sheet_name not in _workbook.sheetnames:
+            _sheet_rows_cache[sheet_name] = []
+            return []
+        ws = _workbook[sheet_name]
+        rows = [list(row) for row in ws.iter_rows(values_only=True)]
+        _sheet_rows_cache[sheet_name] = rows
+        return rows
 
 
 def safe_float(val) -> float | None:

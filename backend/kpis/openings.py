@@ -1,7 +1,7 @@
 """
 KPI 2: Openings — Inventory Creation (Keys Added)
 
-Operational sheet (Weekly update - 30.04.2024 v3.xlsx, 0-indexed rows/cols):
+Operational sheet (weekly workbook `excel_parser.EXCEL_PATH`, 0-indexed rows/cols):
   Monthly: header row 3; Olive cumulative keys row 7 (idx 6), props row 8 (idx 7);
   Open cumulative keys row 12 (idx 11), props row 13 (idx 12);
   Overall cumulative keys row 17 (idx 16), props row 18 (idx 17).
@@ -116,7 +116,7 @@ def _find_wip_header_row(rows: list[list]) -> int | None:
         if not isinstance(h, str):
             continue
         hl = h.lower()
-        if "wip" in hl and "april" in hl:
+        if "wip" in hl and ("april" in hl or "may" in hl):
             return i
     return None
 
@@ -143,6 +143,7 @@ def _parse_wip_properties(rows: list[list], wip_header_row: int) -> list[dict]:
     skip_names = {
         "olive", "open", "handover date", "go-live date", "april '26 wip",
         "april '26 wip ", "april '26 wip — olive", "april '26 wip - olive",
+        "may '26 wip", "may '26 wip — olive", "may '26 wip - olive",
     }
     for i in range(wip_header_row + 1, min(wip_header_row + 40, len(rows))):
         row = rows[i]
@@ -165,7 +166,7 @@ def _parse_wip_properties(rows: list[list], wip_header_row: int) -> list[dict]:
 
 
 def _apr_month_col(rows: list[list]) -> int:
-    """0-indexed column for April'26 month on the monthly grid (last month before Total)."""
+    """0-indexed column for the latest month on the monthly grid (last month-midnight before Total)."""
     for ri in (2, 3, 4, 5):
         if ri >= len(rows):
             continue
@@ -179,6 +180,39 @@ def _apr_month_col(rows: list[list]) -> int:
     return 15
 
 
+def _weekly_row_has_april_mtd_column(rows: list[list]) -> bool:
+    """May 2026+ workbooks insert an April'26 MTD column between March'26 and Week 1 (header Excel row 20, idx 19)."""
+    if len(rows) <= 19:
+        return False
+    h = rows[19]
+    for idx in (2, 3):
+        if len(h) > idx and isinstance(h[idx], str) and "april" in str(h[idx]).lower():
+            return True
+    return False
+
+
+def _get_weekly_data_row(rows: list[list], row_idx: int) -> tuple[int, int, list[int], int]:
+    """March MTD, April MTD (0 if layout has no April column), W1–W5, sheet Total column."""
+    if len(rows) <= row_idx:
+        return 0, 0, [0, 0, 0, 0, 0], 0
+    r = rows[row_idx]
+    if len(r) < 3:
+        return 0, 0, [0, 0, 0, 0, 0], 0
+    mar = safe_int(r[2]) or 0
+    if _weekly_row_has_april_mtd_column(rows) and len(r) > 9:
+        apr = safe_int(r[3]) or 0
+        w = [safe_int(r[c]) or 0 for c in range(4, 9)]
+        tw = sum(w)
+        tcell = safe_int(r[9]) if len(r) > 9 else None
+        tot = tcell if tcell is not None else tw
+        return mar, apr, w, tot
+    w = [safe_int(r[c]) or 0 for c in range(3, 8)]
+    tw = sum(w)
+    tcell = safe_int(r[8]) if len(r) > 8 else None
+    tot = tcell if tcell is not None else tw
+    return mar, 0, w, tot
+
+
 def get_openings() -> dict:
     if not excel_file_available():
         return {"error": excel_workbook_missing_message()}
@@ -186,10 +220,10 @@ def get_openings() -> dict:
     if not rows:
         return {"error": "Operational sheet not found or empty"}
 
-    # Trend: Apr'25 through Apr'26 — cumulative keys row 6 / 11 (0-indexed), month cols start at index 3
+    # Trend: Apr'25 through May'26 — cumulative keys row 7 / 12 (0-indexed), month cols start at index 3
     months = [
         "Apr-25", "May-25", "Jun-25", "Jul-25", "Aug-25", "Sep-25",
-        "Oct-25", "Nov-25", "Dec-25", "Jan-26", "Feb-26", "Mar-26", "Apr-26",
+        "Oct-25", "Nov-25", "Dec-25", "Jan-26", "Feb-26", "Mar-26", "Apr-26", "May-26",
     ]
     trend_data = []
     for i, month_label in enumerate(months):
@@ -236,7 +270,7 @@ def get_openings() -> dict:
             target_str = (
                 str(target_cell).strip()
                 if target_cell and str(target_cell).strip() not in ("None", "")
-                else "April '26"
+                else "May '26"
             )
             wip_properties.append({
                 "name": b_cell,
@@ -244,51 +278,36 @@ def get_openings() -> dict:
                 "go_live": "—",
             })
 
-    # Weekly execution — March'26 col C (2), weeks cols D–G (3–6); v1 data rows 21–22 (Open), 24–25 (Olive)
-    APR_COL = _apr_month_col(rows)
-
-    def mcell(r, c):
-        if len(rows) <= r or len(rows[r]) <= c:
-            return 0
-        return safe_int(rows[r][c]) or 0
-
-    def get_row(row_idx):
-        if len(rows) <= row_idx:
-            return 0, [0, 0, 0, 0, 0]
-        r = rows[row_idx]
-        march26 = safe_int(r[2]) or 0 if len(r) > 2 else 0
-        weekly = [safe_int(r[c]) or 0 for c in range(3, 8)]
-        return march26, weekly
-
-    open_props_mar26, open_props_w = get_row(22)
-    open_keys_mar26, open_keys_w = get_row(23)
-    olive_props_mar26, olive_props_w = get_row(25)
-    olive_keys_mar26, olive_keys_w = get_row(26)
-
-    olive_keys_apr = mcell(4, APR_COL)
-    olive_props_apr = mcell(5, APR_COL)
-    open_keys_apr = mcell(9, APR_COL)
-    open_props_apr = mcell(10, APR_COL)
-
-    def make_entry(label, mar26, apr26, w):
+    # Weekly execution — March'26 col C (2); optional April'26 col D (3); weeks then Total (layout from header row 21, idx 20)
+    def make_entry(label, mar26, apr26, w, sheet_total: int | None = None):
+        tw = sum(w)
+        tot = sheet_total if sheet_total is not None else tw
         return {
             "label":   label,
             "march26": mar26,
             "apr26":   apr26,
             "w1":      w[0], "w2": w[1], "w3": w[2], "w4": w[3], "w5": w[4] if len(w) > 4 else 0,
-            "total":   sum(w),
+            "total":   tot,
         }
+
+    open_props_mar26, open_props_apr, open_props_w, open_props_tot = _get_weekly_data_row(rows, 22)
+    open_keys_mar26, open_keys_apr, open_keys_w, open_keys_tot = _get_weekly_data_row(rows, 23)
+    olive_props_mar26, olive_props_apr, olive_props_w, olive_props_tot = _get_weekly_data_row(rows, 25)
+    olive_keys_mar26, olive_keys_apr, olive_keys_w, olive_keys_tot = _get_weekly_data_row(rows, 26)
+
+    _, _, _, total_props_sheet_tot = _get_weekly_data_row(rows, 29)
+    _, _, _, total_keys_sheet_tot = _get_weekly_data_row(rows, 30)
 
     brands_list = [
         {
             "name": "Open",
-            "props": make_entry("-Properties", open_props_mar26, open_props_apr, open_props_w),
-            "keys":  make_entry("-Keys",       open_keys_mar26,  open_keys_apr,  open_keys_w),
+            "props": make_entry("-Properties", open_props_mar26, open_props_apr, open_props_w, open_props_tot),
+            "keys":  make_entry("-Keys",       open_keys_mar26,  open_keys_apr,  open_keys_w, open_keys_tot),
         },
         {
             "name": "Olive",
-            "props": make_entry("-Properties", olive_props_mar26, olive_props_apr, olive_props_w),
-            "keys":  make_entry("-Keys",       olive_keys_mar26,  olive_keys_apr,  olive_keys_w),
+            "props": make_entry("-Properties", olive_props_mar26, olive_props_apr, olive_props_w, olive_props_tot),
+            "keys":  make_entry("-Keys",       olive_keys_mar26,  olive_keys_apr,  olive_keys_w, olive_keys_tot),
         },
     ]
 
@@ -299,9 +318,12 @@ def get_openings() -> dict:
     total_props_apr = open_props_apr + olive_props_apr
     total_keys_apr = open_keys_apr + olive_keys_apr
 
+    props_tot = total_props_sheet_tot if _weekly_row_has_april_mtd_column(rows) else (open_props_tot + olive_props_tot)
+    keys_tot = total_keys_sheet_tot if _weekly_row_has_april_mtd_column(rows) else (open_keys_tot + olive_keys_tot)
+
     table_totals = {
-        "props": make_entry("-Properties", total_props_mar, total_props_apr, total_props_w),
-        "keys":  make_entry("-Keys",       total_keys_mar,  total_keys_apr,  total_keys_w),
+        "props": make_entry("-Properties", total_props_mar, total_props_apr, total_props_w, props_tot),
+        "keys":  make_entry("-Keys",       total_keys_mar,  total_keys_apr,  total_keys_w, keys_tot),
     }
 
     olive_total_keys = trend_data[-1]["Olive"] if trend_data else 0
@@ -309,7 +331,7 @@ def get_openings() -> dict:
 
     return {
         "trend_data":              trend_data,
-        "current_month":           "April - 2026",
+        "current_month":           "May - 2026",
         "brands":                  brands_list,
         "brands_totals":           table_totals,
         "wip_properties":          wip_properties,

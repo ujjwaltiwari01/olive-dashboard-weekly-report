@@ -79,8 +79,8 @@ export default function SalesYoYPage() {
           </div>
           
           <div style={{ display: "flex", justifyContent: "space-between", marginTop: "16px", paddingTop: "16px", borderTop: "1px dashed #E5E7EB", fontSize: "14px", color: "#4B5563" }}>
-            <div><strong style={{ color: "#1A1A1A"}}>Mar'25 Total:</strong> ₹{data.mar25_total}L</div>
-            <div><strong style={{ color: "#1A1A1A"}}>Mar'26 Total:</strong> ₹{data.mar26_total}L</div>
+            <div><strong style={{ color: "#1A1A1A"}}>{data.left_total_label || "May 2025 Total"}:</strong> ₹{data.mar25_total ?? data.apr25_total}L</div>
+            <div><strong style={{ color: "#1A1A1A"}}>{data.right_total_label || "May 2026 Total"}:</strong> ₹{data.mar26_total ?? data.apr26_total}L</div>
           </div>
         </div>
 

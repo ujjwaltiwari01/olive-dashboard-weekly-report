@@ -1,13 +1,14 @@
 """
 KPI 1: Signings — Deal closures vs targets per Brand with Weekly breakdown
 
-Signings sheet (Weekly update - 30.04.2024 v3.xlsx layout, 0-indexed rows/cols):
+Signings sheet (weekly workbook `excel_parser.EXCEL_PATH`; 0-indexed rows/cols):
   Row 2  = Olive Total Keys     | Cols: A label, B = BF, C.. = Apr'25..Apr'26, then Total
   Row 7  = Spark Total Keys
   Row 12 = Open   Total Keys
   Rows 4–5, 9–10, 14–15 = cumulative properties / keys per brand.
   Rows 19–20 = Overall cumulative properties / keys (monthly trend).
-  Weekly: rows 28–30 (1-based) → indices 27–29 = Open, Olive, Spark — B = Mar'26, C–G = W1–W5, H = Total
+  Weekly: rows 28–30 (1-based) → indices 27–29 = Open, Olive, Spark — v4: B = Mar'26, C–G = W1–W5, H = Total;
+    May'26 workbook: B = Mar'26, C = April'26, D–H = W1–W5, I = Total
   Portfolio Update: label in col A or B; bullets follow. Single blank rows skipped;
   block ends after two consecutive blank rows.
 """
@@ -118,16 +119,16 @@ def get_signings() -> dict:
     if not rows:
         return {"error": "Signings sheet not found or empty", "portfolio_update": []}
 
-    # Monthly trend: Apr'25 through Apr'26 (13 points); first month column index = 2
+    # Monthly trend: Apr'25 through May'26 (14 points); first month column index = 2
     months = [
         "Apr-25", "May-25", "Jun-25", "Jul-25", "Aug-25", "Sep-25",
-        "Oct-25", "Nov-25", "Dec-25", "Jan-26", "Feb-26", "Mar-26", "Apr-26",
+        "Oct-25", "Nov-25", "Dec-25", "Jan-26", "Feb-26", "Mar-26", "Apr-26", "May-26",
     ]
     OLIVE_KEYS, SPARK_KEYS, OPEN_KEYS = 2, 7, 12
     OLIVE_CUM_P, OLIVE_CUM_K = 4, 5
     SPARK_CUM_P, SPARK_CUM_K = 9, 10
     OPEN_CUM_P, OPEN_CUM_K = 14, 15
-    OVERALL_CUM_P, OVERALL_CUM_K = 19, 20
+    OVERALL_CUM_P, OVERALL_CUM_K = 19, 20  # 1-based rows 20–21; 0-indexed 19–20
 
     def _apr_month_col() -> int:
         r0 = rows[0] if rows else []
@@ -137,6 +138,18 @@ def get_signings() -> dict:
         return 14
 
     APR_MONTH_COL = _apr_month_col()
+
+    def _weekly_has_april_mtd_column() -> bool:
+        """Header row is Excel row 26 (idx 25): Operational uses Apr in col D; Signings uses col C."""
+        if len(rows) <= 25:
+            return False
+        h = rows[25]
+        for idx in (2, 3):
+            if len(h) > idx and isinstance(h[idx], str) and "april" in str(h[idx]).lower():
+                return True
+        return False
+
+    weekly_april_col = _weekly_has_april_mtd_column()
 
     monthly_totals = []
     for i, month_label in enumerate(months):
@@ -169,17 +182,27 @@ def get_signings() -> dict:
                 "w1": 0, "w2": 0, "w3": 0, "w4": 0, "w5": 0, "total": 0,
             }
         r = rows[row_idx]
-        apr26 = 0
-        if len(rows) > monthly_keys_row and len(rows[monthly_keys_row]) > APR_MONTH_COL:
-            apr26 = safe_int(rows[monthly_keys_row][APR_MONTH_COL]) or 0
         prev_m = safe_int(r[1]) or 0
-        w1 = safe_int(r[2]) or 0
-        w2 = safe_int(r[3]) or 0
-        w3 = safe_int(r[4]) or 0
-        w4 = safe_int(r[5]) or 0
-        w5 = safe_int(r[6]) or 0
-        t_cell = safe_int(r[7]) if len(r) > 7 else None
-        total = t_cell if t_cell is not None else (w1 + w2 + w3 + w4 + w5)
+        if weekly_april_col and len(r) > 8:
+            apr26 = safe_int(r[2]) or 0
+            w1 = safe_int(r[3]) or 0
+            w2 = safe_int(r[4]) or 0
+            w3 = safe_int(r[5]) or 0
+            w4 = safe_int(r[6]) or 0
+            w5 = safe_int(r[7]) or 0
+            t_cell = safe_int(r[8]) if len(r) > 8 else None
+        else:
+            apr26 = 0
+            if len(rows) > monthly_keys_row and len(rows[monthly_keys_row]) > APR_MONTH_COL:
+                apr26 = safe_int(rows[monthly_keys_row][APR_MONTH_COL]) or 0
+            w1 = safe_int(r[2]) or 0
+            w2 = safe_int(r[3]) or 0
+            w3 = safe_int(r[4]) or 0
+            w4 = safe_int(r[5]) or 0
+            w5 = safe_int(r[6]) or 0
+            t_cell = safe_int(r[7]) if len(r) > 7 else None
+        tw = w1 + w2 + w3 + w4 + w5
+        total = t_cell if t_cell is not None else tw
         return {
             "name": name, "prev_month": prev_m, "apr26": apr26,
             "w1": w1, "w2": w2, "w3": w3, "w4": w4, "w5": w5, "total": total,
@@ -202,10 +225,10 @@ def get_signings() -> dict:
         "total":      sum(b["total"] for b in brands_list),
     }
 
-    mar_total = (
+    apr_total = (
         monthly_totals[-2]["Olive"] + monthly_totals[-2]["Spark"] + monthly_totals[-2]["Open"]
     )
-    apr_total = (
+    may_total = (
         monthly_totals[-1]["Olive"] + monthly_totals[-1]["Spark"] + monthly_totals[-1]["Open"]
     )
 
@@ -215,12 +238,12 @@ def get_signings() -> dict:
 
     return {
         "monthly_totals":    monthly_totals,
-        "current_month":     "April - 2026",
+        "current_month":     "May - 2026",
         "brands":            brands_list,
         "brands_totals":     table_totals,
         "total_properties":  total_properties,
         "total_keys":        total_keys,
         "insights":          [],
-        "comparison_note":   f"April Total Signings: {apr_total} (vs Mar: {mar_total})",
+        "comparison_note":   f"May Total Signings: {may_total} (vs Apr: {apr_total})",
         "portfolio_update":  _portfolio_update_bullets(rows),
     }

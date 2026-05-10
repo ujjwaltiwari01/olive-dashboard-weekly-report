@@ -7,18 +7,15 @@ import { fetchKPI } from "../../lib/api";
 const REFRESH = 60000;
 
 export default function RevenuePage() {
-  const [mixData, setMixData] = useState<any>(null);
-  const [yoyData, setYoyData] = useState<any>(null);
+  const [compositionData, setCompositionData] = useState<any>(null);
+  const [trendData, setTrendData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
   const load = useCallback(async () => {
     try {
-      const [mixRes, yoyRes] = await Promise.all([
-        fetchKPI("sales_mix"),
-        fetchKPI("sales_yoy")
-      ]);
-      setMixData(mixRes);
-      setYoyData(yoyRes);
+      const compositionRes = await fetchKPI("revenue_composition");
+      setCompositionData(compositionRes);
+      setTrendData(compositionRes?.property_revenue_trend ?? compositionRes);
     } catch (e) {
       console.error(e);
     }
@@ -32,119 +29,76 @@ export default function RevenuePage() {
   }, [load]);
 
   if (loading) return <Loading />;
-  if (!mixData || mixData.error || !yoyData || yoyData.error) {
+  if (!compositionData || compositionData.error || !trendData || trendData.error) {
      return <div style={pageStyle}><p>⚠️ Cannot load Revenue KPI data. Backend returned an error.</p></div>;
   }
+  const comparisonData = compositionData.property_revenue_comparison;
 
   return (
     <div style={pageStyle}>
       <PageHeader
-        title="🟠 Revenue Dashboard — April 2026 (week ending 30 Apr)"
-        subtitle="Channel-wise sales mix and year-over-year revenue comparison (₹ in Lakhs). KPI 3 uses the Revenue sheet target vs actuals when Sales is absent; KPI 4 uses managed-properties YoY from the same workbook."
+        title="🟠 Revenue Dashboard — May 2026 (week ending 8 May)"
+        subtitle=""
       />
 
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "24px", maxWidth: "1400px" }}>
         
-        {/* PART 1: MoM COMPARISON STACKED BARS (KPI 3) */}
+        {/* PART 1: Property revenue trend from the Revenue sheet top block */}
         <div style={cardStyle}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: "1px solid #E5E7EB", paddingBottom: "16px", marginBottom: "24px" }}>
-            <h3 style={cardHeaderStyle}>Monthly Revenue Mix</h3>
-            
-            <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end" }}>
-                <span style={{ fontSize: "12px", color: "#6B6B6B", marginBottom: "4px" }}>{mixData.mix_change_label || "MoM Growth"}</span>
-                <span style={{ 
-                    background: mixData.mom_pct >= 0 ? "#F0FDF4" : "#FEF2F2", 
-                    color: mixData.mom_pct >= 0 ? "#16A34A" : "#DC2626", 
-                    padding: "6px 16px", 
-                    borderRadius: "20px", 
-                    fontSize: "16px", 
-                    fontWeight: 700,
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "4px"
-                }}>
-                    {mixData.mom_pct >= 0 ? "↗" : "↘"} {mixData.mom_pct > 0 ? "+" : ""}{mixData.mom_pct}%
-                </span>
-            </div>
+            <h3 style={cardHeaderStyle}>{trendData.title || "Property Revenue - Trend"}</h3>
           </div>
 
           <div style={{ height: "450px", width: "100%" }}>
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={mixData.chart_data || []} margin={{ top: 20, right: 30, left: 0, bottom: 20 }} barSize={100}>
+              <BarChart data={trendData.bars || []} margin={{ top: 36, right: 30, left: 0, bottom: 20 }} barSize={62}>
+                <defs>
+                  <pattern id="longStayHatch" patternUnits="userSpaceOnUse" width="8" height="8" patternTransform="rotate(45)">
+                    <rect width="8" height="8" fill="#FFF4F1" />
+                    <line x1="0" y1="0" x2="0" y2="8" stroke="#E4572E" strokeWidth="3" />
+                  </pattern>
+                </defs>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E5E7EB" />
                 <XAxis dataKey="month" tick={{ fontSize: 14, fill: "#1A1A1A", fontWeight: 600 }} axisLine={{ stroke: "#E5E7EB" }} tickLine={false} dy={10} />
                 <YAxis tick={{ fontSize: 12, fill: "#6B6B6B" }} axisLine={{ stroke: "#E5E7EB" }} tickLine={false} dx={-10} tickFormatter={(val) => `${val}L`} />
                 <RechartsTooltip contentStyle={tooltipStyle} formatter={(val: any) => [`₹${val}L`, "Revenue"]} />
                 <Legend wrapperStyle={{ fontSize: "13px", paddingTop: "20px", color: "#1A1A1A" }} iconType="circle" />
                 
-                <Bar dataKey="Walk-in" stackId="a" fill="#E4572E">
-                    <LabelList dataKey="Walk-in" position="center" fill="#FFFFFF" fontSize={13} fontWeight={600} formatter={(v: any) => v && v > 0 ? `${v}L` : ''} />
+                <Bar dataKey="short_stay_lakhs" name="Short stay" stackId="a" fill="#F8FAFC" stroke="#CBD5E1" strokeWidth={1.5}>
+                    <LabelList dataKey="short_stay_lakhs" position="center" fill="#1A1A1A" fontSize={13} fontWeight={700} formatter={formatLakhsLabel} />
                 </Bar>
-                <Bar dataKey="Online" stackId="a" fill="#1A1A1A">
-                    <LabelList dataKey="Online" position="center" fill="#FFFFFF" fontSize={13} fontWeight={600} formatter={(v: any) => v && v > 0 ? `${v}L` : ''} />
-                </Bar>
-                <Bar dataKey="Corporate" stackId="a" fill="#9CA3AF">
-                    <LabelList dataKey="Corporate" position="center" fill="#FFFFFF" fontSize={13} fontWeight={600} formatter={(v: any) => v && v > 0 ? `${v}L` : ''} />
+                <Bar dataKey="long_stay_lakhs" name="Long stay" stackId="a" fill="url(#longStayHatch)" stroke="#E4572E" strokeWidth={1.5}>
+                    <LabelList dataKey="long_stay_lakhs" position="center" fill="#E4572E" fontSize={12} fontWeight={800} formatter={formatLakhsLabel} />
+                    <LabelList dataKey="total_lakhs" position="top" fill="#1A1A1A" fontSize={14} fontWeight={800} formatter={formatTotalLabel} />
                 </Bar>
               </BarChart>
             </ResponsiveContainer>
-          </div>
-          
-          <div style={{ display: "flex", justifyContent: "space-between", marginTop: "16px", paddingTop: "16px", borderTop: "1px dashed #E5E7EB", fontSize: "14px", color: "#4B5563" }}>
-            <div><strong style={{ color: "#1A1A1A"}}>{mixData.footer_left_label || "Mar Total"}:</strong> ₹{mixData.mar_total}L</div>
-            <div><strong style={{ color: "#1A1A1A"}}>{mixData.footer_right_label || "Apr Total"}:</strong> ₹{mixData.apr_total}L</div>
           </div>
         </div>
 
-        {/* PART 2: YoY COMPARISON STACKED BARS (KPI 4) */}
+        {/* PART 2: Same-period YoY and MoM comparison from the Revenue sheet */}
         <div style={cardStyle}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: "1px solid #E5E7EB", paddingBottom: "16px", marginBottom: "24px" }}>
-            <h3 style={cardHeaderStyle}>Annual YoY Revenue Mix</h3>
-            
-            <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end" }}>
-                <span style={{ fontSize: "12px", color: "#6B6B6B", marginBottom: "4px" }}>YoY Growth</span>
-                <span style={{ 
-                    background: yoyData.yoy_pct >= 0 ? "#F0FDF4" : "#FEF2F2", 
-                    color: yoyData.yoy_pct >= 0 ? "#16A34A" : "#DC2626", 
-                    padding: "6px 16px", 
-                    borderRadius: "20px", 
-                    fontSize: "16px", 
-                    fontWeight: 700,
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "4px"
-                }}>
-                    {yoyData.yoy_pct >= 0 ? "↗" : "↘"} {yoyData.yoy_pct > 0 ? "+" : ""}{yoyData.yoy_pct}%
-                </span>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", borderBottom: "1px solid #E5E7EB", paddingBottom: "16px", marginBottom: "24px" }}>
+            <div>
+              <h3 style={cardHeaderStyle}>{comparisonData?.title || "Property Revenue - vs MoM vs YoY"}</h3>
+              <p style={{ margin: "6px 0 0", fontSize: "13px", color: "#6B6B6B", fontWeight: 600 }}>{comparisonData?.subtitle || "Same period"}</p>
             </div>
           </div>
 
-          <div style={{ height: "450px", width: "100%" }}>
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={yoyData.chart_data || []} margin={{ top: 20, right: 30, left: 0, bottom: 20 }} barSize={100}>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E5E7EB" />
-                <XAxis dataKey="month" tick={{ fontSize: 14, fill: "#1A1A1A", fontWeight: 600 }} axisLine={{ stroke: "#E5E7EB" }} tickLine={false} dy={10} />
-                <YAxis tick={{ fontSize: 12, fill: "#6B6B6B" }} axisLine={{ stroke: "#E5E7EB" }} tickLine={false} dx={-10} tickFormatter={(val) => `${val}L`} />
-                <RechartsTooltip contentStyle={tooltipStyle} formatter={(val: any) => [`₹${val}L`, "Revenue"]} />
-                <Legend wrapperStyle={{ fontSize: "13px", paddingTop: "20px", color: "#1A1A1A" }} iconType="circle" />
-                
-                <Bar dataKey="Walk-in" stackId="a" fill="#E4572E">
-                    <LabelList dataKey="Walk-in" position="center" fill="#FFFFFF" fontSize={13} fontWeight={600} formatter={(v: any) => v && v > 0 ? `${v}L` : ''} />
-                </Bar>
-                <Bar dataKey="Online" stackId="a" fill="#1A1A1A">
-                    <LabelList dataKey="Online" position="center" fill="#FFFFFF" fontSize={13} fontWeight={600} formatter={(v: any) => v && v > 0 ? `${v}L` : ''} />
-                </Bar>
-                <Bar dataKey="Corporate" stackId="a" fill="#9CA3AF">
-                    <LabelList dataKey="Corporate" position="center" fill="#FFFFFF" fontSize={13} fontWeight={600} formatter={(v: any) => v && v > 0 ? `${v}L` : ''} />
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "20px", height: "450px" }}>
+            <ComparisonMiniChart data={comparisonData?.yoy} patternId="comparisonYoyHatch" />
+            <ComparisonMiniChart data={comparisonData?.mom} patternId="comparisonMomHatch" />
           </div>
-          
-          <div style={{ display: "flex", justifyContent: "space-between", marginTop: "16px", paddingTop: "16px", borderTop: "1px dashed #E5E7EB", fontSize: "14px", color: "#4B5563" }}>
-            <div><strong style={{ color: "#1A1A1A"}}>Apr 2025 Total:</strong> ₹{yoyData.apr25_total}L</div>
-            <div><strong style={{ color: "#1A1A1A"}}>Apr 2026 Total:</strong> ₹{yoyData.apr26_total}L</div>
+        </div>
+
+        {/* PART 3: Online / offline channels and online split */}
+        <div style={{ ...cardStyle, gridColumn: "1 / -1" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: "1px solid #E5E7EB", paddingBottom: "16px", marginBottom: "24px" }}>
+            <h3 style={cardHeaderStyle}>
+              {compositionData.property_revenue_online_offline?.title || "Property Revenue - Online vs Offline and OTA vs OBE- 8th May '26"}
+            </h3>
           </div>
+          <OnlineOfflineChart data={compositionData.property_revenue_online_offline} />
         </div>
 
       </div>
@@ -154,15 +108,137 @@ export default function RevenuePage() {
 
 // ─── STYLES & HELPERS ──────────────────────────────────────────────────────────
 
+function ComparisonMiniChart({ data, patternId }: { data: any; patternId: string }) {
+  const growth = Number(data?.growth_pct ?? 0);
+  return (
+    <div style={{ border: "1px solid #E5E7EB", borderRadius: "12px", padding: "16px 14px 8px", background: "#FFFFFF", minWidth: 0 }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "8px" }}>
+        <h4 style={{ margin: 0, fontSize: "14px", fontWeight: 800, color: "#1A1A1A" }}>{data?.label || "Comparison"}</h4>
+        <span style={{
+          background: growth >= 0 ? "#F0FDF4" : "#FEF2F2",
+          color: growth >= 0 ? "#16A34A" : "#DC2626",
+          borderRadius: "999px",
+          padding: "4px 10px",
+          fontSize: "12px",
+          fontWeight: 800,
+        }}>
+          {growth > 0 ? "+" : ""}{growth}%
+        </span>
+      </div>
+      <ResponsiveContainer width="100%" height="88%">
+        <BarChart data={data?.bars || []} margin={{ top: 34, right: 8, left: -18, bottom: 16 }} barSize={54}>
+          <defs>
+            <pattern id={patternId} patternUnits="userSpaceOnUse" width="8" height="8" patternTransform="rotate(45)">
+              <rect width="8" height="8" fill="#FFF4F1" />
+              <line x1="0" y1="0" x2="0" y2="8" stroke="#E4572E" strokeWidth="3" />
+            </pattern>
+          </defs>
+          <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#EEF2F7" />
+          <XAxis dataKey="month" tick={{ fontSize: 12, fill: "#1A1A1A", fontWeight: 700 }} axisLine={{ stroke: "#E5E7EB" }} tickLine={false} dy={8} />
+          <YAxis tick={{ fontSize: 11, fill: "#6B6B6B" }} axisLine={{ stroke: "#E5E7EB" }} tickLine={false} tickFormatter={(val) => `${val}L`} />
+          <RechartsTooltip contentStyle={tooltipStyle} formatter={(val: any) => [`₹${val}L`, "Revenue"]} />
+          <Bar dataKey="short_stay_lakhs" name="Short stay" stackId="a" fill="#F8FAFC" stroke="#CBD5E1" strokeWidth={1.5}>
+            <LabelList dataKey="short_stay_lakhs" position="center" fill="#1A1A1A" fontSize={11} fontWeight={700} formatter={formatLakhsLabel} />
+          </Bar>
+          <Bar dataKey="long_stay_lakhs" name="Long stay" stackId="a" fill={`url(#${patternId})`} stroke="#E4572E" strokeWidth={1.5}>
+            <LabelList dataKey="long_stay_lakhs" position="center" fill="#E4572E" fontSize={11} fontWeight={800} formatter={formatLakhsLabel} />
+            <LabelList dataKey="total_lakhs" position="top" fill="#1A1A1A" fontSize={12} fontWeight={800} formatter={formatTotalLabel} />
+          </Bar>
+        </BarChart>
+      </ResponsiveContainer>
+    </div>
+  );
+}
+
+function OnlineOfflineChart({ data }: { data: any }) {
+  return (
+    <div style={{ display: "grid", gridTemplateColumns: "1.5fr 0.9fr", gap: "24px", minHeight: "430px" }}>
+      <div style={{ border: "1px solid #E5E7EB", borderRadius: "12px", padding: "18px 16px 8px", background: "#FFFFFF", minWidth: 0 }}>
+        <h4 style={{ margin: 0, fontSize: "14px", fontWeight: 800, color: "#1A1A1A" }}>
+          {data?.actual_vs_target?.label || "Actual vs Target"}
+        </h4>
+        <ResponsiveContainer width="100%" height="90%">
+          <BarChart data={data?.actual_vs_target?.bars || []} margin={{ top: 34, right: 24, left: -4, bottom: 22 }} barSize={72}>
+            <defs>
+              <pattern id="corporateHatch" patternUnits="userSpaceOnUse" width="8" height="8" patternTransform="rotate(45)">
+                <rect width="8" height="8" fill="#FFF4F1" />
+                <line x1="0" y1="0" x2="0" y2="8" stroke="#E4572E" strokeWidth="3" />
+              </pattern>
+              <pattern id="walkInGrid" patternUnits="userSpaceOnUse" width="8" height="8">
+                <rect width="8" height="8" fill="#111827" />
+                <path d="M 8 0 L 0 0 0 8" fill="none" stroke="#FFFFFF" strokeWidth="1.4" opacity="0.8" />
+              </pattern>
+            </defs>
+            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#EEF2F7" />
+            <XAxis dataKey="month" tick={{ fontSize: 13, fill: "#1A1A1A", fontWeight: 700 }} axisLine={{ stroke: "#E5E7EB" }} tickLine={false} dy={10} />
+            <YAxis tick={{ fontSize: 12, fill: "#6B6B6B" }} axisLine={{ stroke: "#E5E7EB" }} tickLine={false} tickFormatter={(val) => `${val}L`} />
+            <RechartsTooltip contentStyle={tooltipStyle} formatter={(val: any) => [`₹${val}L`, "Revenue"]} />
+            <Legend wrapperStyle={{ fontSize: "12px", paddingTop: "14px", color: "#1A1A1A" }} iconType="circle" />
+            <Bar dataKey="online_lakhs" name="Online" stackId="a" fill="#F8FAFC" stroke="#CBD5E1" strokeWidth={1.5}>
+              <LabelList dataKey="online_lakhs" position="center" fill="#1A1A1A" fontSize={12} fontWeight={700} formatter={formatLakhsLabel} />
+            </Bar>
+            <Bar dataKey="corporate_lakhs" name="Corporate" stackId="a" fill="url(#corporateHatch)" stroke="#E4572E" strokeWidth={1.5}>
+              <LabelList dataKey="corporate_lakhs" position="center" fill="#E4572E" fontSize={12} fontWeight={800} formatter={formatLakhsLabel} />
+            </Bar>
+            <Bar dataKey="walk_in_lakhs" name="Walk-in" stackId="a" fill="url(#walkInGrid)" stroke="#111827" strokeWidth={1.5}>
+              <LabelList dataKey="walk_in_lakhs" position="center" fill="#FFFFFF" fontSize={12} fontWeight={800} formatter={formatLakhsLabel} />
+              <LabelList dataKey="total_lakhs" position="top" fill="#1A1A1A" fontSize={13} fontWeight={800} formatter={formatTotalLabel} />
+            </Bar>
+          </BarChart>
+        </ResponsiveContainer>
+      </div>
+
+      <div style={{ border: "1px solid #E5E7EB", borderRadius: "12px", padding: "18px 16px 8px", background: "#FFFFFF", minWidth: 0 }}>
+        <h4 style={{ margin: 0, fontSize: "14px", fontWeight: 800, color: "#1A1A1A" }}>
+          {data?.online_split?.label || "OBE vs OTAs"}
+        </h4>
+        <ResponsiveContainer width="100%" height="90%">
+          <BarChart data={data?.online_split?.bars || []} margin={{ top: 34, right: 16, left: -14, bottom: 22 }} barSize={78}>
+            <defs>
+              <pattern id="obeHatch" patternUnits="userSpaceOnUse" width="8" height="8" patternTransform="rotate(45)">
+                <rect width="8" height="8" fill="#FFF4F1" />
+                <line x1="0" y1="0" x2="0" y2="8" stroke="#E4572E" strokeWidth="3" />
+              </pattern>
+            </defs>
+            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#EEF2F7" />
+            <XAxis dataKey="month" tick={{ fontSize: 13, fill: "#1A1A1A", fontWeight: 700 }} axisLine={{ stroke: "#E5E7EB" }} tickLine={false} dy={10} />
+            <YAxis tick={{ fontSize: 12, fill: "#6B6B6B" }} axisLine={{ stroke: "#E5E7EB" }} tickLine={false} tickFormatter={(val) => `${val}L`} />
+            <RechartsTooltip contentStyle={tooltipStyle} formatter={(val: any) => [`₹${val}L`, "Revenue"]} />
+            <Legend wrapperStyle={{ fontSize: "12px", paddingTop: "14px", color: "#1A1A1A" }} iconType="circle" />
+            <Bar dataKey="otas_lakhs" name="OTAs" stackId="a" fill="#F8FAFC" stroke="#CBD5E1" strokeWidth={1.5}>
+              <LabelList dataKey="otas_lakhs" position="center" fill="#1A1A1A" fontSize={12} fontWeight={700} formatter={formatLakhsLabel} />
+            </Bar>
+            <Bar dataKey="obe_lakhs" name="OBE" stackId="a" fill="url(#obeHatch)" stroke="#E4572E" strokeWidth={1.5}>
+              <LabelList dataKey="obe_lakhs" position="center" fill="#E4572E" fontSize={12} fontWeight={800} formatter={formatLakhsLabel} />
+              <LabelList dataKey="total_lakhs" position="top" fill="#1A1A1A" fontSize={13} fontWeight={800} formatter={formatTotalLabel} />
+            </Bar>
+          </BarChart>
+        </ResponsiveContainer>
+      </div>
+    </div>
+  );
+}
+
 const pageStyle: React.CSSProperties = { padding: "40px", maxWidth: "1400px", backgroundColor: "#FFFFFF", minHeight: "100vh" };
 const cardStyle: React.CSSProperties = { background: "#FAFAFA", borderRadius: "12px", padding: "32px", border: "1px solid #E5E7EB", boxShadow: "0 4px 12px rgba(0,0,0,0.03)" };
 const cardHeaderStyle: React.CSSProperties = { margin: "0", fontSize: "18px", fontWeight: 700, color: "#1A1A1A" };
+
+function formatLakhsLabel(v: any) {
+  if (!v || Number(v) <= 0) return "";
+  const n = Number(v);
+  return n >= 100 ? `${Math.round(n)}L` : `${n.toFixed(1)}L`;
+}
+
+function formatTotalLabel(v: any) {
+  if (!v || Number(v) <= 0) return "";
+  return `₹${Math.round(Number(v))}L`;
+}
 
 function PageHeader({ title, subtitle }: { title: string; subtitle: string }) {
   return (
     <div style={{ marginBottom: "32px", borderBottom: "1px solid #E5E7EB", paddingBottom: "16px" }}>
       <h1 style={{ fontSize: "28px", fontWeight: 700, color: "#1A1A1A", margin: 0 }}>{title}</h1>
-      <p style={{ color: "#6B6B6B", marginTop: "8px", fontSize: "15px", fontWeight: 400 }}>{subtitle}</p>
+      {subtitle ? <p style={{ color: "#6B6B6B", marginTop: "8px", fontSize: "15px", fontWeight: 400 }}>{subtitle}</p> : null}
     </div>
   );
 }

@@ -76,7 +76,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
 
       {/* Footer */}
       <div style={{ padding: "16px 20px", borderTop: "1px solid rgba(255,255,255,0.08)" }}>
-        <div style={{ color: "#475569", fontSize: "11px" }}>Updated: Apr 04, 2026</div>
+        <div style={{ color: "#475569", fontSize: "11px" }}>Updated: May 10, 2026</div>
         <div style={{ color: "#475569", fontSize: "11px", marginTop: "2px" }}>Auto-refresh: 60s</div>
       </div>
     </aside>

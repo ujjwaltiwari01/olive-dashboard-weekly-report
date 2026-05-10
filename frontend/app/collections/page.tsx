@@ -112,6 +112,9 @@ export default function CollectionsPage() {
       <div style={{ marginBottom: "4px", display: "flex", justifyContent: "space-between", alignItems: "flex-end" }}>
         <div>
           <h1 style={{ fontSize: "22px", fontWeight: 800, color: "#0f172a", marginBottom: "0px", letterSpacing: "-0.02em" }}>{data.title}</h1>
+          {data.subtitle ? (
+            <p style={{ margin: "6px 0 0 0", fontSize: "13px", color: "#64748b" }}>{data.subtitle}</p>
+          ) : null}
         </div>
       </div>
 

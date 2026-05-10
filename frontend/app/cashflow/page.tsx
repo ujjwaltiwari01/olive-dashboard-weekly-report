@@ -73,7 +73,7 @@ export default function CashflowPage() {
         style={{ marginBottom: "28px", borderBottom: "1px solid #E5E7EB", paddingBottom: "16px" }}
       >
         <h1 style={{ fontSize: "26px", fontWeight: 700, color: "#1A1A1A", margin: 0 }}>
-          🏦 Cashflow Summary — April 2026 (week ending 30 Apr)
+          🏦 Cashflow Summary — May 2026
         </h1>
       </div>
 

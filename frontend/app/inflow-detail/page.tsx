@@ -28,11 +28,11 @@ export default function InflowDetailPage() {
     <div style={{ padding: "32px", maxWidth: "1400px" }}>
       <div style={{ marginBottom: "28px" }}>
         <h1 style={{ fontSize: "24px", fontWeight: 800, color: "#0f172a", margin: 0 }}>🔶 Inflow Detail — Collection Engine</h1>
-        <p style={{ color: "#64748b", marginTop: "4px", fontSize: "14px" }}>TA Fee collection per property — April 2026 (from Inflow breakdown when TA Fee sheet is absent)</p>
+        <p style={{ color: "#64748b", marginTop: "4px", fontSize: "14px" }}>TA Fee collection per property — May 2026 (from Inflow breakdown when TA Fee sheet is absent)</p>
       </div>
 
       <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: "16px", marginBottom: "20px" }}>
-        <KPICard title="Apr'26 Collectable" value={formatCurrency(summary?.total_target ?? 0, true)} color="blue" icon="📋" size="lg" />
+        <KPICard title="May'26 Collectable" value={formatCurrency(summary?.total_target ?? 0, true)} color="blue" icon="📋" size="lg" />
         <KPICard title="Collected" value={formatCurrency(summary?.total_collected ?? 0, true)} color="green" icon="✅" size="lg" />
         <KPICard title="Outstanding" value={formatCurrency(summary?.total_due ?? 0, true)} color={(summary?.total_due ?? 0) > 1000000 ? "red" : "amber"} icon="⏳" size="lg" />
         <KPICard title="Collection %" value={formatPct(summary?.collection_pct ?? 0)} color={(summary?.collection_pct ?? 0) >= 80 ? "green" : (summary?.collection_pct ?? 0) >= 60 ? "amber" : "red"} icon="💯" size="lg" />
@@ -84,7 +84,7 @@ export default function InflowDetailPage() {
               <th style={thS}>Property</th>
               <th style={thS}>City</th>
               <th style={thS}>BD</th>
-              <th style={thS}>Apr&apos;26 Target</th>
+              <th style={thS}>May&apos;26 Target</th>
               <th style={thS}>W1</th>
               <th style={thS}>W2</th>
               <th style={thS}>W3</th>

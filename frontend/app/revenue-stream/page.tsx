@@ -82,8 +82,8 @@ export default function RevenueStreamPage() {
           </div>
           
           <div style={{ display: "flex", justifyContent: "space-between", marginTop: "16px", paddingTop: "16px", borderTop: "1px dashed #E5E7EB", fontSize: "14px", color: "#4B5563" }}>
-            <div><strong style={{ color: "#1A1A1A"}}>Feb Total:</strong> ₹{data.feb26_total}L</div>
-            <div><strong style={{ color: "#1A1A1A"}}>Mar Total:</strong> ₹{data.mar26_total}L</div>
+            <div><strong style={{ color: "#1A1A1A"}}>{data.left_total_label || "Target total"}:</strong> ₹{data.feb26_total}L</div>
+            <div><strong style={{ color: "#1A1A1A"}}>{data.right_total_label || "Received total"}:</strong> ₹{data.mar26_total}L</div>
           </div>
         </div>
 
@@ -134,8 +134,8 @@ export default function RevenueStreamPage() {
           </div>
           
           <div style={{ display: "flex", justifyContent: "space-between", marginTop: "16px", paddingTop: "16px", borderTop: "1px dashed #E5E7EB", fontSize: "14px", color: "#4B5563" }}>
-            <div><strong style={{ color: "#1A1A1A"}}>Mar'25 Total:</strong> ₹{data.mar25_total}L</div>
-            <div><strong style={{ color: "#1A1A1A"}}>Mar'26 Total:</strong> ₹{data.mar26_total}L</div>
+            <div><strong style={{ color: "#1A1A1A"}}>{data.left_total_label || "Target total"}:</strong> ₹{data.mar25_total}L</div>
+            <div><strong style={{ color: "#1A1A1A"}}>{data.right_total_label || "Received total"}:</strong> ₹{data.mar26_total}L</div>
           </div>
         </div>
 

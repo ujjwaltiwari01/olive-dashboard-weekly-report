@@ -1,6 +1,6 @@
 """
-KPI 4: Cashflow — April
-Reads live from Excel (cashflow sheet), Weekly update - 30.04.2024 v3.xlsx
+KPI 4: Cashflow — May 2026
+Reads live from Excel (`cashflow` sheet) via `excel_parser.EXCEL_PATH`.
 
 cashflow sheet layout (1-indexed cols):
   col2 = label | col3 = Target | col4..8 = W1..W5 | col9 = Total | col10 = Expected
@@ -15,15 +15,14 @@ cashflow sheet layout (1-indexed cols):
   R20 : Closing Cash (col10 fallback col9)
 """
 import os
-import openpyxl
 
-from excel_parser import EXCEL_PATH, excel_workbook_missing_message
+from excel_parser import EXCEL_PATH, excel_workbook_missing_message, shared_workbook
 
 
 def _read():
     if not os.path.isfile(EXCEL_PATH):
         raise FileNotFoundError(excel_workbook_missing_message())
-    wb = openpyxl.load_workbook(EXCEL_PATH, read_only=True, data_only=True)
+    wb = shared_workbook()
     ws = wb["cashflow"]
 
     def v(row, col):
@@ -75,7 +74,6 @@ def _read():
         {"account": "VARS",                "amount": v(18, 3)},
     ]
 
-    wb.close()
     return inflows, total_outflow, current_balance, closing_balance, account_balance
 
 

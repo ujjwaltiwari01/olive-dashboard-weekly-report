@@ -312,7 +312,7 @@ export default function OpeningsPage() {
                 <span style={{ display: "block", height: "3px", width: "36px", background: "#E4572E", borderRadius: "2px", marginTop: "6px" }} />
               </h3>
               <span style={{ color: "#E4572E", fontWeight: 700, fontSize: "13px", letterSpacing: "0.3px" }}>
-                {data?.current_month || "April - 2026"}
+                {data?.current_month || "May - 2026"}
               </span>
             </div>
 
@@ -320,21 +320,23 @@ export default function OpeningsPage() {
             <div style={{ background: "#fff", borderRadius: "10px", border: "1px solid #EBEBEB", overflow: "hidden" }}>
               <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "13px" }}>
                 <colgroup>
-                  <col style={{ width: "32%" }} />
-                  <col style={{ width: "13%", background: "#FFF4F1" }} />
-                  <col /><col /><col /><col />
-                  <col style={{ width: "11%", background: "#FFFBF0" }} />
+                  <col style={{ width: "28%" }} />
+                  <col style={{ width: "10%", background: "#FFF4F1" }} />
+                  <col style={{ width: "10%", background: "#FFF4F1" }} />
+                  <col /><col /><col /><col /><col />
+                  <col style={{ width: "10%", background: "#FFFBF0" }} />
                 </colgroup>
                 <thead>
                   <tr style={{ borderBottom: "1px solid #EBEBEB" }}>
                     <th style={{ padding: "10px 14px", textAlign: "left", fontSize: "11px", fontWeight: 700, color: "#9CA3AF", textTransform: "uppercase", letterSpacing: "0.5px" }}>Brand</th>
                     <th style={{ padding: "10px 14px", textAlign: "center", fontSize: "11px", fontWeight: 700, color: "#E4572E", textTransform: "uppercase", letterSpacing: "0.5px", background: "#FFF4F1" }}>Mar &apos;26</th>
+                    <th style={{ padding: "10px 14px", textAlign: "center", fontSize: "11px", fontWeight: 700, color: "#E4572E", textTransform: "uppercase", letterSpacing: "0.5px", background: "#FFF4F1" }}>Apr &apos;26</th>
                     <th style={{ padding: "10px 14px", textAlign: "center", fontSize: "11px", fontWeight: 700, color: "#9CA3AF", textTransform: "uppercase", letterSpacing: "0.5px" }}>W1</th>
                     <th style={{ padding: "10px 14px", textAlign: "center", fontSize: "11px", fontWeight: 700, color: "#9CA3AF", textTransform: "uppercase", letterSpacing: "0.5px" }}>W2</th>
                     <th style={{ padding: "10px 14px", textAlign: "center", fontSize: "11px", fontWeight: 700, color: "#9CA3AF", textTransform: "uppercase", letterSpacing: "0.5px" }}>W3</th>
                     <th style={{ padding: "10px 14px", textAlign: "center", fontSize: "11px", fontWeight: 700, color: "#9CA3AF", textTransform: "uppercase", letterSpacing: "0.5px" }}>W4</th>
                     <th style={{ padding: "10px 14px", textAlign: "center", fontSize: "11px", fontWeight: 700, color: "#9CA3AF", textTransform: "uppercase", letterSpacing: "0.5px" }}>W5</th>
-                    <th style={{ padding: "10px 14px", textAlign: "center", fontSize: "11px", fontWeight: 700, color: "#E4572E", textTransform: "uppercase", letterSpacing: "0.5px", background: "#FFF4F1" }}>April &apos;26</th>
+                    <th style={{ padding: "10px 14px", textAlign: "center", fontSize: "11px", fontWeight: 700, color: "#E4572E", textTransform: "uppercase", letterSpacing: "0.5px", background: "#FFF4F1" }}>Total</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -344,6 +346,7 @@ export default function OpeningsPage() {
                       <tr style={{ borderBottom: "1px solid #F7F7F7" }}>
                         <td style={{ padding: "10px 14px", fontWeight: 600, color: "#1A1A1A", fontSize: "13px" }}>{brand.name} <span style={{ color: "#9CA3AF", fontWeight: 400, fontSize: "11px" }}>— Props</span></td>
                         <td style={{ padding: "10px 14px", textAlign: "center", fontWeight: 700, color: "#E4572E", background: "#FFF4F1", fontSize: "14px" }}>{brand.props.march26}</td>
+                        <td style={{ padding: "10px 14px", textAlign: "center", fontWeight: 700, color: "#E4572E", background: "#FFF4F1", fontSize: "14px" }}>{brand.props.apr26 ?? "—"}</td>
                         <td style={{ padding: "10px 14px", textAlign: "center", color: "#9CA3AF", fontWeight: 500 }}>{brand.props.w1}</td>
                         <td style={{ padding: "10px 14px", textAlign: "center", color: "#9CA3AF", fontWeight: 500 }}>{brand.props.w2}</td>
                         <td style={{ padding: "10px 14px", textAlign: "center", color: "#9CA3AF", fontWeight: 500 }}>{brand.props.w3}</td>
@@ -355,6 +358,7 @@ export default function OpeningsPage() {
                       <tr style={{ borderBottom: "1px solid #EBEBEB" }}>
                         <td style={{ padding: "10px 14px 10px 24px", fontWeight: 500, color: "#6B7280", fontSize: "12px" }}>{brand.name} <span style={{ color: "#9CA3AF", fontWeight: 400, fontSize: "11px" }}>— Keys</span></td>
                         <td style={{ padding: "10px 14px", textAlign: "center", fontWeight: 700, color: "#E4572E", background: "#FFF4F1", fontSize: "14px" }}>{brand.keys.march26}</td>
+                        <td style={{ padding: "10px 14px", textAlign: "center", fontWeight: 700, color: "#E4572E", background: "#FFF4F1", fontSize: "14px" }}>{brand.keys.apr26 ?? "—"}</td>
                         <td style={{ padding: "10px 14px", textAlign: "center", color: "#9CA3AF", fontWeight: 500 }}>{brand.keys.w1}</td>
                         <td style={{ padding: "10px 14px", textAlign: "center", color: "#9CA3AF", fontWeight: 500 }}>{brand.keys.w2}</td>
                         <td style={{ padding: "10px 14px", textAlign: "center", color: "#9CA3AF", fontWeight: 500 }}>{brand.keys.w3}</td>
@@ -369,6 +373,7 @@ export default function OpeningsPage() {
                   <tr style={{ borderTop: "2px solid #E4572E", background: "#FAFAFA" }}>
                     <td style={{ padding: "12px 14px", fontWeight: 800, color: "#1A1A1A", fontSize: "13px" }}>Total <span style={{ color: "#9CA3AF", fontWeight: 400, fontSize: "11px" }}>— Props</span></td>
                     <td style={{ padding: "12px 14px", textAlign: "center", fontWeight: 800, color: "#E4572E", background: "#FFF4F1", fontSize: "15px" }}>{data?.brands_totals?.props?.march26}</td>
+                    <td style={{ padding: "12px 14px", textAlign: "center", fontWeight: 800, color: "#E4572E", background: "#FFF4F1", fontSize: "15px" }}>{data?.brands_totals?.props?.apr26 ?? "—"}</td>
                     <td style={{ padding: "12px 14px", textAlign: "center", fontWeight: 700, color: "#1A1A1A" }}>{data?.brands_totals?.props?.w1}</td>
                     <td style={{ padding: "12px 14px", textAlign: "center", fontWeight: 700, color: "#1A1A1A" }}>{data?.brands_totals?.props?.w2}</td>
                     <td style={{ padding: "12px 14px", textAlign: "center", fontWeight: 700, color: "#1A1A1A" }}>{data?.brands_totals?.props?.w3}</td>
@@ -380,6 +385,7 @@ export default function OpeningsPage() {
                   <tr style={{ background: "#FAFAFA" }}>
                     <td style={{ padding: "12px 14px 12px 24px", fontWeight: 700, color: "#374151", fontSize: "13px" }}>Total <span style={{ color: "#9CA3AF", fontWeight: 400, fontSize: "11px" }}>— Keys</span></td>
                     <td style={{ padding: "12px 14px", textAlign: "center", fontWeight: 800, color: "#E4572E", background: "#FFF4F1", fontSize: "15px" }}>{data?.brands_totals?.keys?.march26}</td>
+                    <td style={{ padding: "12px 14px", textAlign: "center", fontWeight: 800, color: "#E4572E", background: "#FFF4F1", fontSize: "15px" }}>{data?.brands_totals?.keys?.apr26 ?? "—"}</td>
                     <td style={{ padding: "12px 14px", textAlign: "center", fontWeight: 700, color: "#1A1A1A" }}>{data?.brands_totals?.keys?.w1}</td>
                     <td style={{ padding: "12px 14px", textAlign: "center", fontWeight: 700, color: "#1A1A1A" }}>{data?.brands_totals?.keys?.w2}</td>
                     <td style={{ padding: "12px 14px", textAlign: "center", fontWeight: 700, color: "#1A1A1A" }}>{data?.brands_totals?.keys?.w3}</td>
@@ -404,7 +410,7 @@ export default function OpeningsPage() {
             flexDirection: "column",
             padding: "14px 20px",
           }}>
-            <h3 style={{ ...contextHeaderStyle, fontSize: "11px", marginBottom: "12px", color: "#E4572E" }}>April&apos;26 WIP — Olive</h3>
+            <h3 style={{ ...contextHeaderStyle, fontSize: "11px", marginBottom: "12px", color: "#E4572E" }}>May&apos;26 WIP — Olive</h3>
             <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "12px", tableLayout: "fixed" }}>
               <colgroup>
                 <col style={{ width: "42%" }} />

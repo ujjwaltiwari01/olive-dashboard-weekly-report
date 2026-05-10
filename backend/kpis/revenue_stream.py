@@ -1,13 +1,84 @@
 """
-KPI 5: Revenue Stream (MoM & YoY)
-Sheet: Summary
+KPI 5: Revenue Stream
+
+Legacy workbooks used a Summary sheet. The May 2026 weekly workbook exposes the
+same stream totals through Inflow/cashflow, so fall back to those sheets when
+Summary is absent.
 """
 from excel_parser import get_sheet_values, safe_int
+
+
+def _to_lakhs(val: int | float) -> float:
+    return round(float(val or 0) / 100000.0, 1)
+
+
+def _from_current_inflow() -> dict | None:
+    rows = get_sheet_values("Inflow") or get_sheet_values("cashflow")
+    if not rows:
+        return None
+
+    labels = {
+        "ta": ("TA Fees", 0, 0),
+        "management": ("Management Fees", 0, 0),
+        "profit": ("Profit Incentive", 0, 0),
+    }
+
+    for row in rows:
+        if not row or len(row) < 10:
+            continue
+        label = str(row[1] or "").replace("\xa0", " ").strip().lower()
+        if not label:
+            continue
+        target = safe_int(row[2]) or 0
+        received = safe_int(row[9]) if len(row) > 9 else None
+        if received is None:
+            received = sum((safe_int(row[c]) or 0) for c in range(4, min(9, len(row))))
+
+        if "ta" in label and "fee" in label and "total" in label:
+            labels["ta"] = ("TA Fees", target, received or 0)
+        elif "management" in label and "fee" in label:
+            labels["management"] = ("Management Fees", target, received or 0)
+        elif "profit" in label and "incentive" in label:
+            labels["profit"] = ("Profit Incentive", target, received or 0)
+
+    target = {name: target for name, target, _ in labels.values()}
+    received = {name: received for name, _, received in labels.values()}
+    target_total = sum(target.values())
+    received_total = sum(received.values())
+    achievement = round((received_total - target_total) / target_total * 100, 1) if target_total else 0.0
+
+    def bar(label: str, data: dict) -> dict:
+        return {
+            "month": label,
+            "TA Fees": _to_lakhs(data["TA Fees"]),
+            "Management Fees": _to_lakhs(data["Management Fees"]),
+            "Profit Incentive": _to_lakhs(data["Profit Incentive"]),
+        }
+
+    return {
+        "mom_chart": [
+            bar("Target May'26", target),
+            bar("Received May'26", received),
+        ],
+        "yoy_chart": [
+            bar("Target May'26", target),
+            bar("Received May'26", received),
+        ],
+        "mom_pct": achievement,
+        "yoy_pct": achievement,
+        "feb26_total": _to_lakhs(target_total),
+        "mar26_total": _to_lakhs(received_total),
+        "mar25_total": _to_lakhs(target_total),
+        "source": "current_inflow",
+        "left_total_label": "Target total",
+        "right_total_label": "Received total",
+    }
 
 def get_revenue_stream() -> dict:
     rows = get_sheet_values("Summary")
     if not rows or len(rows) < 13:
-        return {"error": "Missing Summary data"}
+        fb = _from_current_inflow()
+        return fb if fb else {"error": "Missing Summary data"}
     
     # Data is in strictly determined rows natively:
     # rows[5] = Spark TA
@@ -37,37 +108,33 @@ def get_revenue_stream() -> dict:
     mar26_mgt = extract_val(9, 12)
     mar26_pro = extract_val(12, 12)
 
-    # Format numbers in Lakhs correctly
-    def to_lakhs(val: int) -> float:
-        return round(val / 100000.0, 1)
-
     mom_chart = [
         {
             "month": "Feb'26",
-            "TA Fees": to_lakhs(feb26_ta),
-            "Management Fees": to_lakhs(feb26_mgt),
-            "Profit Incentive": to_lakhs(feb26_pro)
+            "TA Fees": _to_lakhs(feb26_ta),
+            "Management Fees": _to_lakhs(feb26_mgt),
+            "Profit Incentive": _to_lakhs(feb26_pro)
         },
         {
             "month": "March'26",
-            "TA Fees": to_lakhs(mar26_ta),
-            "Management Fees": to_lakhs(mar26_mgt),
-            "Profit Incentive": to_lakhs(mar26_pro)
+            "TA Fees": _to_lakhs(mar26_ta),
+            "Management Fees": _to_lakhs(mar26_mgt),
+            "Profit Incentive": _to_lakhs(mar26_pro)
         }
     ]
 
     yoy_chart = [
         {
             "month": "March'25",
-            "TA Fees": to_lakhs(mar25_ta),
-            "Management Fees": to_lakhs(mar25_mgt),
-            "Profit Incentive": to_lakhs(mar25_pro)
+            "TA Fees": _to_lakhs(mar25_ta),
+            "Management Fees": _to_lakhs(mar25_mgt),
+            "Profit Incentive": _to_lakhs(mar25_pro)
         },
         {
             "month": "March'26",
-            "TA Fees": to_lakhs(mar26_ta),
-            "Management Fees": to_lakhs(mar26_mgt),
-            "Profit Incentive": to_lakhs(mar26_pro)
+            "TA Fees": _to_lakhs(mar26_ta),
+            "Management Fees": _to_lakhs(mar26_mgt),
+            "Profit Incentive": _to_lakhs(mar26_pro)
         }
     ]
 
@@ -88,7 +155,7 @@ def get_revenue_stream() -> dict:
         "yoy_chart": yoy_chart,
         "mom_pct": mom_pct,
         "yoy_pct": yoy_pct,
-        "feb26_total": to_lakhs(feb26_sum),
-        "mar26_total": to_lakhs(mar26_sum),
-        "mar25_total": to_lakhs(mar25_sum)
+        "feb26_total": _to_lakhs(feb26_sum),
+        "mar26_total": _to_lakhs(mar26_sum),
+        "mar25_total": _to_lakhs(mar25_sum)
     }

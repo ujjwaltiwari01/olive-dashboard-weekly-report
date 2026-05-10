@@ -4,7 +4,7 @@ import { useEffect, useState, useCallback } from "react";
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid,
   ComposedChart,
-  ResponsiveContainer, LabelList,
+  ResponsiveContainer, LabelList, Legend,
   Tooltip as RechartsTooltip,
   useXAxisScale,
   useYAxisScale,
@@ -483,6 +483,9 @@ function StackedSectionShortLong({
     { segment: "Overall", april25: t25, april26: t26, growth_pct: gOverall },
   ];
 
+  const labelPriorYear = String(r25?.name ?? "Prior year");
+  const labelCurrentYear = String(r26?.name ?? "Current year");
+
   const periodLine =
     (periodLabel && periodLabel.replace(/^YoY\s+Growth\s*/i, "").trim()) ||
     periodLabel?.match(/\(([^)]+)\)/)?.[1] ||
@@ -544,7 +547,7 @@ function StackedSectionShortLong({
                 boxSizing: "border-box",
               }}
             />
-            April &apos;25
+            {labelPriorYear}
           </span>
           <span style={legendSwatch}>
             <span
@@ -556,7 +559,7 @@ function StackedSectionShortLong({
                 boxSizing: "border-box",
               }}
             />
-            April &apos;26
+            {labelCurrentYear}
           </span>
         </div>
       </div>
@@ -597,7 +600,7 @@ function StackedSectionShortLong({
             />
             <Bar
               dataKey="april25"
-              name="April '25"
+              name={labelPriorYear}
               fill={barGreyApr25}
               radius={[6, 6, 0, 0]}
               maxBarSize={52}
@@ -609,7 +612,7 @@ function StackedSectionShortLong({
             </Bar>
             <Bar
               dataKey="april26"
-              name="April '26"
+              name={labelCurrentYear}
               fill={orangeApr26}
               radius={[6, 6, 0, 0]}
               maxBarSize={52}
@@ -1206,6 +1209,193 @@ function FranchisedMoMSection({
   );
 }
 
+function SketchTotalLabel(v: any) {
+  if (!v || Number(v) <= 0) return "";
+  return `₹${Math.round(Number(v))}L`;
+}
+
+const sketchTooltipStyle = {
+  borderRadius: "8px",
+  border: "1px solid #E5E7EB",
+  fontSize: "13px",
+  backgroundColor: "#FFFFFF",
+  boxShadow: "0 4px 12px rgba(0,0,0,0.05)",
+};
+
+const sketchSlate = "#64748B";
+const sketchOrange = "#F15A24";
+const sketchDark = "#111827";
+
+function sketchRevenueTooltipFormatter(val: any, name: any) {
+  return [`₹${val}L`, String(name)];
+}
+
+function sketchOnlineSplitTooltipFormatter(val: any, name: any, item: any) {
+  const key = String(item?.dataKey || "");
+  const pct = key === "obe_lakhs" ? item?.payload?.obe_pct : key === "otas_lakhs" ? item?.payload?.otas_pct : null;
+  return [`₹${val}L${pct != null ? ` (${pct}%)` : ""}`, String(name)];
+}
+
+function achievementPct(actual: any, target: any) {
+  const a = Number(actual || 0);
+  const t = Number(target || 0);
+  return t > 0 ? Math.round((a / t) * 100) : 0;
+}
+
+function AchievementPill({ label, value }: { label: string; value: number }) {
+  return (
+    <span style={{
+      background: "#ECFDF5",
+      color: "#047857",
+      border: "1px solid #A7F3D0",
+      borderRadius: "999px",
+      padding: "5px 10px",
+      fontSize: "12px",
+      fontWeight: 800,
+      whiteSpace: "nowrap",
+    }}>
+      {label}: {value}%
+    </span>
+  );
+}
+
+function PropertyRevenueTrendSketch({ data }: { data: any }) {
+  return (
+    <div className="rc-card" style={cardStyle}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: "1px solid #E5E7EB", paddingBottom: "16px", marginBottom: "24px" }}>
+        <h3 style={cardHeaderStyle}>{data?.title || "Property Revenue - Trend"}</h3>
+      </div>
+      <div style={{ height: "520px", width: "100%" }}>
+        <ResponsiveContainer width="100%" height="100%">
+          <BarChart data={data?.bars || []} margin={{ top: 44, right: 28, left: 0, bottom: 20 }} barSize={44}>
+            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E5E7EB" />
+            <XAxis dataKey="month" tick={{ fontSize: 13, fill: "#1A1A1A", fontWeight: 700 }} axisLine={{ stroke: "#E5E7EB" }} tickLine={false} dy={10} />
+            <YAxis tick={{ fontSize: 12, fill: "#6B6B6B" }} axisLine={{ stroke: "#E5E7EB" }} tickLine={false} dx={-10} tickFormatter={(val) => `${val}L`} />
+            <RechartsTooltip contentStyle={sketchTooltipStyle} formatter={sketchRevenueTooltipFormatter as any} />
+            <Legend wrapperStyle={{ fontSize: "13px", paddingTop: "18px", color: "#1A1A1A" }} iconType="circle" />
+            <Bar dataKey="short_stay_lakhs" name="Short stay" stackId="a" fill={sketchSlate} radius={[0, 0, 0, 0]} />
+            <Bar dataKey="long_stay_lakhs" name="Long stay" stackId="a" fill={sketchOrange} radius={[10, 10, 0, 0]}>
+              <LabelList dataKey="total_lakhs" position="top" fill="#111827" fontSize={18} fontWeight={900} formatter={SketchTotalLabel} />
+            </Bar>
+          </BarChart>
+        </ResponsiveContainer>
+      </div>
+    </div>
+  );
+}
+
+function RevenueComparisonMiniSketch({ data }: { data: any }) {
+  const growth = Number(data?.growth_pct ?? 0);
+  return (
+    <div style={{ border: "1px solid #E5E7EB", borderRadius: "12px", padding: "16px 14px 8px", background: "#FFFFFF", minWidth: 0 }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "8px" }}>
+        <h4 style={{ margin: 0, fontSize: "14px", fontWeight: 800, color: "#1A1A1A" }}>{data?.label || "Comparison"}</h4>
+        <span style={{ background: growth >= 0 ? "#F0FDF4" : "#FEF2F2", color: growth >= 0 ? "#16A34A" : "#DC2626", borderRadius: "999px", padding: "5px 12px", fontSize: "13px", fontWeight: 900 }}>
+          Growth rate: {Math.round(100 + growth)}%
+        </span>
+      </div>
+      <ResponsiveContainer width="100%" height="88%">
+        <BarChart data={data?.bars || []} margin={{ top: 44, right: 8, left: -18, bottom: 16 }} barSize={40}>
+          <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#EEF2F7" />
+          <XAxis dataKey="month" tick={{ fontSize: 12, fill: "#1A1A1A", fontWeight: 700 }} axisLine={{ stroke: "#E5E7EB" }} tickLine={false} dy={8} />
+          <YAxis tick={{ fontSize: 11, fill: "#6B6B6B" }} axisLine={{ stroke: "#E5E7EB" }} tickLine={false} tickFormatter={(val) => `${val}L`} />
+          <RechartsTooltip contentStyle={sketchTooltipStyle} formatter={sketchRevenueTooltipFormatter as any} />
+          <Legend wrapperStyle={{ fontSize: "12px", paddingTop: "12px", color: "#1A1A1A" }} iconType="circle" />
+          <Bar dataKey="short_stay_lakhs" name="Short stay" stackId="a" fill={sketchSlate} />
+          <Bar dataKey="long_stay_lakhs" name="Long stay" stackId="a" fill={sketchOrange} radius={[8, 8, 0, 0]}>
+            <LabelList dataKey="total_lakhs" position="top" fill="#111827" fontSize={17} fontWeight={900} formatter={SketchTotalLabel} />
+          </Bar>
+        </BarChart>
+      </ResponsiveContainer>
+    </div>
+  );
+}
+
+function PropertyRevenueComparisonSketch({ data }: { data: any }) {
+  return (
+    <div className="rc-card" style={cardStyle}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", borderBottom: "1px solid #E5E7EB", paddingBottom: "16px", marginBottom: "24px" }}>
+        <div>
+          <h3 style={cardHeaderStyle}>Property Revenue - Same period</h3>
+        </div>
+      </div>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "20px", height: "520px" }}>
+        <RevenueComparisonMiniSketch data={data?.yoy} />
+        <RevenueComparisonMiniSketch data={data?.mom} />
+      </div>
+    </div>
+  );
+}
+
+function PropertyRevenueOnlineOfflineSketch({ data }: { data: any }) {
+  return (
+    <div className="rc-card" style={cardStyle}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: "1px solid #E5E7EB", paddingBottom: "16px", marginBottom: "24px" }}>
+        <h3 style={cardHeaderStyle}>{data?.title || "Property Revenue - Online vs Offline and OTA vs OBE- 8th May '26"}</h3>
+      </div>
+      <div style={{ display: "grid", gridTemplateColumns: "1.5fr 0.9fr", gap: "24px", height: "520px" }}>
+        <RevenueChannelSketch data={data?.actual_vs_target} />
+        <OnlineSplitSketch data={data?.online_split} />
+      </div>
+    </div>
+  );
+}
+
+function RevenueChannelSketch({ data }: { data: any }) {
+  const actual = data?.bars?.[0] || {};
+  const target = data?.bars?.[1] || {};
+  return (
+    <div style={{ border: "1px solid #E5E7EB", borderRadius: "12px", padding: "18px 16px 8px", background: "#FFFFFF", minWidth: 0 }}>
+      <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: "16px", marginBottom: "10px" }}>
+        <h4 style={{ margin: 0, fontSize: "14px", fontWeight: 800, color: "#1A1A1A" }}>{data?.label || "Actual vs Target"}</h4>
+        <div style={{ display: "flex", gap: "8px", flexWrap: "wrap", justifyContent: "flex-end" }}>
+          <span style={{ color: "#64748B", fontSize: "12px", fontWeight: 800, alignSelf: "center", textTransform: "uppercase", letterSpacing: "0.04em" }}>
+            Achievements
+          </span>
+          <AchievementPill label="Total" value={achievementPct(actual.total_lakhs, target.total_lakhs)} />
+          <AchievementPill label="Online" value={achievementPct(actual.online_lakhs, target.online_lakhs)} />
+          <AchievementPill label="Corporate" value={achievementPct(actual.corporate_lakhs, target.corporate_lakhs)} />
+        </div>
+      </div>
+      <ResponsiveContainer width="100%" height="90%">
+        <BarChart data={data?.bars || []} margin={{ top: 44, right: 24, left: -4, bottom: 22 }} barSize={46}>
+          <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#EEF2F7" />
+          <XAxis dataKey="month" tick={{ fontSize: 13, fill: "#1A1A1A", fontWeight: 700 }} axisLine={{ stroke: "#E5E7EB" }} tickLine={false} dy={10} />
+          <YAxis tick={{ fontSize: 12, fill: "#6B6B6B" }} axisLine={{ stroke: "#E5E7EB" }} tickLine={false} tickFormatter={(val) => `${val}L`} />
+          <RechartsTooltip contentStyle={sketchTooltipStyle} formatter={sketchRevenueTooltipFormatter as any} />
+          <Legend wrapperStyle={{ fontSize: "12px", paddingTop: "14px", color: "#1A1A1A" }} iconType="circle" />
+          <Bar dataKey="online_lakhs" name="Online" stackId="a" fill={sketchSlate} />
+          <Bar dataKey="corporate_lakhs" name="Corporate" stackId="a" fill={sketchOrange} />
+          <Bar dataKey="walk_in_lakhs" name="Walk-in" stackId="a" fill={sketchDark} radius={[8, 8, 0, 0]}>
+            <LabelList dataKey="total_lakhs" position="top" fill="#111827" fontSize={18} fontWeight={900} formatter={SketchTotalLabel} />
+          </Bar>
+        </BarChart>
+      </ResponsiveContainer>
+    </div>
+  );
+}
+
+function OnlineSplitSketch({ data }: { data: any }) {
+  return (
+    <div style={{ border: "1px solid #E5E7EB", borderRadius: "12px", padding: "18px 16px 8px", background: "#FFFFFF", minWidth: 0 }}>
+      <h4 style={{ margin: 0, fontSize: "14px", fontWeight: 800, color: "#1A1A1A" }}>{data?.label || "OBE vs OTAs"}</h4>
+      <ResponsiveContainer width="100%" height="90%">
+        <BarChart data={data?.bars || []} margin={{ top: 44, right: 16, left: -14, bottom: 22 }} barSize={44}>
+          <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#EEF2F7" />
+          <XAxis dataKey="month" tick={{ fontSize: 13, fill: "#1A1A1A", fontWeight: 700 }} axisLine={{ stroke: "#E5E7EB" }} tickLine={false} dy={10} />
+          <YAxis tick={{ fontSize: 12, fill: "#6B6B6B" }} axisLine={{ stroke: "#E5E7EB" }} tickLine={false} tickFormatter={(val) => `${val}L`} />
+          <RechartsTooltip contentStyle={sketchTooltipStyle} formatter={sketchOnlineSplitTooltipFormatter as any} />
+          <Legend wrapperStyle={{ fontSize: "12px", paddingTop: "14px", color: "#1A1A1A" }} iconType="circle" />
+          <Bar dataKey="otas_lakhs" name="OTAs" stackId="a" fill={sketchSlate} />
+          <Bar dataKey="obe_lakhs" name="OBE" stackId="a" fill={sketchOrange} radius={[8, 8, 0, 0]}>
+            <LabelList dataKey="total_lakhs" position="top" fill="#111827" fontSize={18} fontWeight={900} formatter={SketchTotalLabel} />
+          </Bar>
+        </BarChart>
+      </ResponsiveContainer>
+    </div>
+  );
+}
+
 export default function RevenueCompositionPage() {
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -1245,9 +1435,6 @@ export default function RevenueCompositionPage() {
       </div>
     );
 
-  const s2 = data.section2;
-  const s3 = data.section3;
-
   return (
     <div style={pageStyle}>
       <style>{`
@@ -1280,38 +1467,15 @@ export default function RevenueCompositionPage() {
         style={{ marginBottom: "32px", borderBottom: "1px solid #E5E7EB", paddingBottom: "16px" }}
       >
         <h1 style={{ fontSize: "26px", fontWeight: 700, color: "#111827", margin: "0 0 4px 0" }}>
-          Revenue Composition — 1 April&apos;26 to 30 April&apos;26
+          Revenue Composition — 1 May 2026 to 8 May&apos;26
         </h1>
-        <p style={{ margin: 0, fontSize: "13px", color: "#9CA3AF", fontWeight: 500 }}>1 April&apos;26 to 30 April&apos;26 · Same period comparison</p>
       </div>
 
-      <StackedSectionOnlineOffline
-        title="Budget vs Actual - Managed properties"
-        periodLabel={data.section1.label}
-        achievementOnlinePct={data.section1.achievement_online_pct}
-        achievementOfflinePct={data.section1.achievement_offline_pct}
-        achievementOverallPct={data.section1.achievement_pct}
-        bars={data.section1.bars}
-        delay={120}
-      />
-      <div style={{ height: "24px" }} />
-
-      <StackedSectionShortLong
-        title="YoY Growth - Managed properties"
-        periodLabel={s2.label}
-        bars={s2.bars}
-        delay={260}
-      />
-      <div style={{ height: "24px" }} />
-
-      {s3?.bars?.length ? (
-        <FranchisedMoMSection
-          title="MoM Growth - Franchised properties"
-          subtitle={s3.label}
-          bars={s3.bars}
-          delay={400}
-        />
-      ) : null}
+      <div style={{ display: "flex", flexDirection: "column", gap: "32px", width: "100%" }}>
+        <PropertyRevenueTrendSketch data={data.property_revenue_trend} />
+        <PropertyRevenueComparisonSketch data={data.property_revenue_comparison} />
+        <PropertyRevenueOnlineOfflineSketch data={data.property_revenue_online_offline} />
+      </div>
     </div>
   );
 }

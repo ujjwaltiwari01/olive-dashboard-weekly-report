@@ -170,8 +170,8 @@ def get_collections() -> dict:
     os_ = row_fields(open_setup)
 
     return {
-        "title": "Collections — April'26",
-        "subtitle": "Collections breakdown by revenue stream",
+        "title": "Collections — May'26",
+        "subtitle": "Collections breakdown by revenue stream · May 2026",
         "sections": [
             {
                 "name": "TA Fees",

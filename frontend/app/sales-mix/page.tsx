@@ -79,8 +79,8 @@ export default function SalesMixPage() {
           </div>
           
           <div style={{ display: "flex", justifyContent: "space-between", marginTop: "16px", paddingTop: "16px", borderTop: "1px dashed #E5E7EB", fontSize: "14px", color: "#4B5563" }}>
-            <div><strong style={{ color: "#1A1A1A"}}>Feb Total:</strong> ₹{data.feb_total}L</div>
-            <div><strong style={{ color: "#1A1A1A"}}>Mar Total:</strong> ₹{data.mar_total}L</div>
+            <div><strong style={{ color: "#1A1A1A"}}>{data.footer_left_label || "Target total"}:</strong> ₹{data.feb_total ?? data.mar_total}L</div>
+            <div><strong style={{ color: "#1A1A1A"}}>{data.footer_right_label || "Actual total"}:</strong> ₹{data.apr_total ?? data.mar_total}L</div>
           </div>
         </div>
 
